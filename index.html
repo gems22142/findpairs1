@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="manifest" href="site.webmanifest">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Найди пары</title>
@@ -12,18 +16,15 @@
       background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
       font-family: 'Montserrat', sans-serif;
       display: flex; flex-direction: column; min-height: 100vh;
-      align-items: center; user-select: none;
+      align-items: center; user-select: none; overflow-x: hidden;
     }
     h1 {
       margin: 20px 0 10px;
       color: #fff;
       text-shadow: 2px 2px 6px rgba(0,0,0,0.4);
     }
-    #difficulty {
-      margin-bottom: 20px;
-    }
-    #difficulty button {
-      margin: 0 10px;
+    #difficulty button, .game-btn {
+      margin: 5px 10px;
       padding: 10px 20px;
       font-size: 16px;
       border-radius: 8px;
@@ -33,318 +34,792 @@
       color: white;
       background: #007bff;
       box-shadow: 0 4px 10px rgba(0,123,255,0.4);
-      transition: background-color 0.3s ease;
+      transition: all 0.3s ease;
     }
-    #difficulty button:hover {
-      background: #0056b3;
-    }
+    #difficulty button:hover, .game-btn:hover { background: #0056b3; transform: translateY(-2px); }
+    #difficulty button:disabled { background: #5a96d4; cursor: default; transform: none; }
+
     #game-board {
       display: grid;
       gap: 12px;
-      max-width: 900px;
+      max-width: 95vw;
       justify-content: center;
-      margin-bottom: 40px;
+      margin-top: 15px; 
+      margin-bottom: 20px;
+      transition: all 0.5s ease-in-out;
     }
-    .card {
-      width: 90px;
-      height: 120px;
-      perspective: 1000px;
+    .card { 
+      width: 90px; 
+      height: 120px; 
+      perspective: 1000px; 
       cursor: pointer;
-      position: relative;
-      transition: opacity 0.5s ease;
+      transition: opacity 0.6s ease, transform 0.5s ease-in-out, grid-area 0.5s ease-in-out;
+    }
+    .card.disabled {
+      cursor: not-allowed;
+      pointer-events: none;
     }
     .card-inner {
+      position: relative; width: 100%; height: 100%;
+      transition: transform 0.5s; transform-style: preserve-3d;
+      border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .card.flipped .card-inner { transform: rotateY(180deg); }
+    .card-front, .card-back {
+      position: absolute; width: 100%; height: 100%;
+      border-radius: 12px; backface-visibility: hidden;
+      display: flex; justify-content: center; align-items: center; font-size: 48px;
+    }
+    .card-front { background: #fff; transform: rotateY(180deg); }
+    .card-back { background: #1e90ff; color: #fff; box-shadow: inset 0 0 20px #1565c0; }
+
+    #modal, #modal-settings {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 2000;
+    }
+    #modal.active, #modal-settings.active { opacity: 1; pointer-events: auto; }
+
+    .modal-box {
+      background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+      padding: 20px 40px; max-width: 420px; width: 90%; text-align: center;
+      border-radius: 20px; border: 3px solid white; box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    }
+
+    .modal-box h2 { 
+      margin-top: 0;
+      margin-bottom: 15px; 
+      font-weight: 700; 
+      font-size: 28px; 
+      color: #fff; 
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3); 
+    }
+    
+    .st-row { margin: 10px 0; text-align: left; }
+    .st-row label { display: block; margin-bottom: 5px; font-weight: bold; color: #fff; }
+    
+    .language-container {
       position: relative;
       width: 100%;
-      height: 100%;
-      transition: transform 0.5s;
-      transform-style: preserve-3d;
-      border-radius: 12px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     }
-    .card.flipped .card-inner {
-      transform: rotateY(180deg);
-    }
-    .card-front,
-    .card-back {
-      position: absolute;
+    
+    .language-select-wrapper {
+      position: relative;
       width: 100%;
-      height: 100%;
+    }
+    
+    #lang-select {
+      width: 100%; 
+      padding: 15px 20px;
+      font-size: 18px; 
       border-radius: 12px;
-      backface-visibility: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 48px;
-      user-select: none;
-    }
-    .card-front {
-      background: #fff;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-      transform: rotateY(180deg);
-    }
-    .card-back {
-      background: #1e90ff;
-      color: #fff;
-      box-shadow: inset 0 0 20px #1565c0;
-    }
-    #message {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #323232cc;
-      color: #fff;
-      font-weight: 700;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 24px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-      z-index: 1000;
-    }
-    #modal {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-      z-index: 2000;
-    }
-    #modal.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    #modal-content {
-      background: #fff;
-      border-radius: 16px;
-      padding: 30px 40px;
-      max-width: 350px;
-      text-align: center;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-    }
-    #modal-content h2 {
-      margin-bottom: 20px;
-      font-weight: 700;
-      font-size: 28px;
-      color: #333;
-    }
-    #modal-content button {
-      margin: 10px 15px;
-      padding: 10px 25px;
-      font-size: 18px;
-      border: none;
-      border-radius: 10px;
+      font-family: 'Montserrat', sans-serif; 
+      border: 2px solid white;
+      background: rgba(255, 255, 255, 0.95);
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      color: #333;
       font-weight: 600;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
-    #modal-content button#play-again {
-      background-color: #28a745;
+    
+    #lang-select:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+      background: white;
+      border-color: #66a6ff;
+    }
+    
+    #lang-select:focus {
+      outline: none;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 10px 30px rgba(102, 166, 255, 0.4);
+      border-color: #007bff;
+    }
+    
+    .full-width { width: 100%; margin: 10px 0 !important; }
+    #play-again { background-color: #28a745; }
+    #exit-win { background-color: #dc3545; }
+    #sound-toggle { background-color: #17a2b8; }
+
+    #settings-btn {
+      position: fixed; top: 20px; right: 20px; 
+      background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+      border: 2px solid white;
+      border-radius: 50%; 
+      width: 50px; 
+      height: 50px;
+      font-size: 24px; 
+      cursor: pointer; 
+      display: flex;
+      align-items: center; 
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,123,255,0.3); 
+      z-index: 1500;
       color: white;
+      transition: all 0.3s ease;
     }
-    #modal-content button#play-again:hover {
-      background-color: #218838;
+
+    #settings-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0,123,255,0.4);
     }
-    #modal-content button#exit {
-      background-color: #dc3545;
+    
+    #message {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(50, 50, 50, 0.9); color: #fff; padding: 12px 24px;
+      border-radius: 12px; font-size: 22px; font-weight: bold;
+      opacity: 0; transition: opacity 0.5s ease; z-index: 3000;
+      pointer-events: none; border: 2px solid #fff;
+    }
+
+    .volume-control {
+      margin: 15px 0;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .volume-slider-container {
+      display: flex;
+      align-items: center;
+      margin: 12px 0;
+    }
+
+    .volume-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+      cursor: pointer;
+      border: 3px solid white;
+      box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+      transition: all 0.3s ease;
+    }
+
+    .volume-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px rgba(0, 123, 255, 0.8);
+    }
+
+    .volume-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+      cursor: pointer;
+      border: 3px solid white;
+      box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+    }
+
+    .volume-value {
+      margin-left: 15px;
+      min-width: 40px;
+      text-align: center;
+      font-weight: bold;
       color: white;
+      font-size: 16px;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.2);
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
     }
-    #modal-content button#exit:hover {
-      background-color: #c82333;
+
+    .volume-label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+      color: white;
+      font-size: 16px;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .modal-box {
+      animation: fadeInUp 0.4s ease-out;
+    }
+
+    .music-disclaimer {
+      margin: 15px 0;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      text-align: center;
+      color: white;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .music-disclaimer h4 {
+      margin: 0 0 6px 0;
+      font-size: 14px;
+      color: #e6f7ff;
+      font-weight: 700;
+    }
+
+    .music-disclaimer p {
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    .music-note {
+      font-size: 20px;
+      margin-right: 8px;
+      vertical-align: middle;
     }
   </style>
 </head>
 <body>
 
-<h1>Найди пары</h1>
+<h1 id="main-title">Find Pairs</h1>
 
 <div id="difficulty">
-  <button data-cards="10">Легко</button>
-  <button data-cards="20">Нормально</button>
-  <button data-cards="30">Сложно</button>
-  <button data-cards="50">Экстрим</button>
+  <button data-cards="10" id="btn-easy">Easy</button>
+  <button data-cards="20" id="btn-norm">Normal</button>
+  <button data-cards="30" id="btn-hard">Hard</button>
+  <button data-cards="50" id="btn-extr">Extreme</button>
 </div>
+
+<button id="settings-btn">⚙️</button>
 
 <div id="game-board"></div>
 
-<div id="message">Нашли пару!</div>
+<div id="message"></div>
 
 <div id="modal">
-  <div id="modal-content">
-    <h2>Молодец, ты выиграл!</h2>
-    <button id="play-again">Играть ещё раз</button>
-    <button id="exit">Выйти</button>
+  <div class="modal-box">
+    <h2 id="win-text">Well done!</h2>
+    <button id="play-again" class="game-btn full-width">Play Again</button>
+    <button id="exit-win" class="game-btn full-width">Exit</button>
+  </div>
+</div>
+
+<div id="modal-settings">
+  <div class="modal-box">
+    <h2 id="st-header">Settings</h2>
+    
+    <div class="st-row">
+      <label id="st-lang-label">Language:</label>
+      <div class="language-container">
+        <div class="language-select-wrapper">
+          <select id="lang-select">
+            <option value="ru" class="language-option">Русский</option>
+            <option value="en" selected class="language-option">English</option>
+            <option value="ua" class="language-option">Українська</option>
+            <option value="by" class="language-option">Беларуская</option>
+            <option value="it" class="language-option">Italiano</option>
+            <option value="es" class="language-option">Español</option>
+            <option value="ar" class="language-option">العربية</option>
+            <option value="zh" class="language-option">中文</option>
+            <option value="jp" class="language-option">日本語</option>
+            <option value="am" class="language-option">Հայերեն</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <div class="music-disclaimer">
+      <h4><span class="music-note">🎵</span><span id="music-title">Музыка в игре</span></h4>
+      <p id="music-text">Фоновая музыка: "Fluffing a Duck" by Kevin MacLeod<br>Лицензия: Creative Commons Attribution 4.0</p>
+    </div>
+    
+    <div class="volume-control">
+      <label class="volume-label" id="music-volume-label">Music Volume:</label>
+      <div class="volume-slider-container">
+        <input type="range" min="0" max="100" value="50" class="volume-slider" id="music-volume">
+        <div class="volume-value" id="music-volume-value">50%</div>
+      </div>
+      
+      <label class="volume-label" id="effects-volume-label">Effects Volume:</label>
+      <div class="volume-slider-container">
+        <input type="range" min="0" max="100" value="70" class="volume-slider" id="effects-volume">
+        <div class="volume-value" id="effects-volume-value">70%</div>
+      </div>
+    </div>
+    
+    <button id="sound-toggle" class="game-btn full-width">Music: ON</button>
+    <button id="close-settings" class="game-btn full-width">OK</button>
   </div>
 </div>
 
 <script>
   const cardSymbols = ['🍎','🍌','🍇','🍓','🍍','🥝','🍒','🥥','🍉','🍑','🥭','🍐','🍋','🍊','🍈','🍅','🍆','🥕','🌽','🥔','🥒','🥬','🌶️','🧄','🧅','🍄','🥜','🌰','🥑','🍞','🧀','🍗','🍖','🥩','🍤','🍙','🍚','🥨','🥯','🍔','🍟','🌭','🍕','🥪','🌮','🌯','🥗','🥫','🍦','🍰'];
-  let firstCard = null;
-  let secondCard = null;
-  let lockBoard = false;
-  let matchedPairs = 0;
-  let totalPairs = 0;
+  
+  const translations = {
+    ru: { 
+      title: "Найди пары", 
+      easy: "Легко", 
+      norm: "Нормально", 
+      hard: "Сложно", 
+      extr: "Экстрим", 
+      win: "Молодец, ты выиграл!", 
+      again: "Играть ещё раз", 
+      exit: "Выйти", 
+      st: "Настройки", 
+      lang: "Язык:", 
+      sndOn: "Музыка: ВКЛ", 
+      sndOff: "Музыка: ВЫКЛ", 
+      match: "Пара найдена!", 
+      ok: "ОК",
+      musicVol: "Громкость музыки:",
+      effectsVol: "Громкость эффектов:",
+      musicTitle: "Музыка в игре",
+      musicText: "Фоновая музыка: 'Fluffing a Duck' от Kevin MacLeod<br>Лицензия: Creative Commons Attribution 4.0"
+    },
+    en: { 
+      title: "Find Pairs", 
+      easy: "Easy", 
+      norm: "Normal", 
+      hard: "Hard", 
+      extr: "Extreme", 
+      win: "Well done, you won!", 
+      again: "Play Again", 
+      exit: "Exit", 
+      st: "Settings", 
+      lang: "Language:", 
+      sndOn: "Music: ON", 
+      sndOff: "Music: OFF", 
+      match: "Match found!", 
+      ok: "OK",
+      musicVol: "Music Volume:",
+      effectsVol: "Effects Volume:",
+      musicTitle: "Game Music",
+      musicText: "Background music: 'Fluffing a Duck' by Kevin MacLeod<br>License: Creative Commons Attribution 4.0"
+    },
+    ua: { 
+      title: "Знайди пари", 
+      easy: "Легко", 
+      norm: "Нормально", 
+      hard: "Складно", 
+      extr: "Екстрим", 
+      win: "Молодець, ти виграв!", 
+      again: "Грати ще раз", 
+      exit: "Вийти", 
+      st: "Налаштування", 
+      lang: "Мова:", 
+      sndOn: "Музика: ВКЛ", 
+      sndOff: "Музика: ВИМК", 
+      match: "Пару знайдено!", 
+      ok: "Добре",
+      musicVol: "Гучність музики:",
+      effectsVol: "Гучність ефектів:",
+      musicTitle: "Музика в грі",
+      musicText: "Фонова музика: 'Fluffing a Duck' від Kevin MacLeod<br>Ліцензія: Creative Commons Attribution 4.0"
+    },
+    by: { 
+      title: "Знайдзі пары", 
+      easy: "Лёгка", 
+      norm: "Нармальна", 
+      hard: "Складана", 
+      extr: "Экстрым", 
+      win: "Маладзец, ты выйграў!", 
+      again: "Гуляць яшчэ раз", 
+      exit: "Выйсці", 
+      st: "Налады", 
+      lang: "Мова:", 
+      sndOn: "Музыка: ВКЛ", 
+      sndOff: "Музыка: ВЫКЛ", 
+      match: "Пара знойдзена!", 
+      ok: "ОК",
+      musicVol: "Гучнасць музыкі:",
+      effectsVol: "Гучнасць эфектаў:",
+      musicTitle: "Музыка ў гульні",
+      musicText: "Фонавая музыка: 'Fluffing a Duck' ад Kevin MacLeod<br>Ліцэнзія: Creative Commons Attribution 4.0"
+    },
+    it: { 
+      title: "Trova le coppie", 
+      easy: "Facile", 
+      norm: "Normale", 
+      hard: "Difficile", 
+      extr: "Estremo", 
+      win: "Bravo, hai vinto!", 
+      again: "Gioca ancora", 
+      exit: "Esci", 
+      st: "Impostazioni", 
+      lang: "Lingua:", 
+      sndOn: "Musica: ON", 
+      sndOff: "Musica: OFF", 
+      match: "Coppia trovata!", 
+      ok: "OK",
+      musicVol: "Volume Musica:",
+      effectsVol: "Volume Effetti:",
+      musicTitle: "Musica nel gioco",
+      musicText: "Musica di sottofondo: 'Fluffing a Duck' di Kevin MacLeod<br>Licenza: Creative Commons Attribution 4.0"
+    },
+    es: { 
+      title: "Encontrar pares", 
+      easy: "Fácil", 
+      norm: "Normal", 
+      hard: "Difícil", 
+      extr: "Extremo", 
+      win: "¡Bien hecho, ganaste!", 
+      again: "Jugar de nuevo", 
+      exit: "Salir", 
+      st: "Ajustes", 
+      lang: "Idioma:", 
+      sndOn: "Música: ON", 
+      sndOff: "Música: OFF", 
+      match: "¡Pareja encontrada!", 
+      ok: "Aceptar",
+      musicVol: "Volumen Música:",
+      effectsVol: "Volumen Efectos:",
+      musicTitle: "Música del juego",
+      musicText: "Música de fondo: 'Fluffing a Duck' por Kevin MacLeod<br>Licencia: Creative Commons Attribution 4.0"
+    },
+    ar: { 
+      title: "البحث عن الأزواج", 
+      easy: "سهل", 
+      norm: "عادي", 
+      hard: "صعب", 
+      extr: "أقصى", 
+      win: "أحسنت، لقد فزت!", 
+      again: "العب مرة أخرى", 
+      exit: "خروج", 
+      st: "إعدادات", 
+      lang: "اللغة:", 
+      sndOn: "موسيقى: تفعيل", 
+      sndOff: "موسيقى: تعطيل", 
+      match: "تم العثور على زوج!", 
+      ok: "موافق",
+      musicVol: "مستوى صوت الموسيقى:",
+      effectsVol: "مستوى صوت المؤثرات:",
+      musicTitle: "موسيقى اللعبة",
+      musicText: "موسيقى الخلفية: 'Fluffing a Duck' بواسطة Kevin MacLeod<br>الترخيص: Creative Commons Attribution 4.0"
+    },
+    zh: { 
+      title: "配对游戏", 
+      easy: "简单", 
+      norm: "普通", 
+      hard: "困难", 
+      extr: "极限", 
+      win: "太棒了, 你赢了!", 
+      again: "再玩一次", 
+      exit: "退出", 
+      st: "设置", 
+      lang: "语言:", 
+      sndOn: "音乐: 开启", 
+      sndOff: "音乐: 关闭", 
+      match: "配对成功!", 
+      ok: "确定",
+      musicVol: "音乐音量:",
+      effectsVol: "效果音量:",
+      musicTitle: "游戏音乐",
+      musicText: "背景音乐: Kevin MacLeod 的 'Fluffing a Duck'<br>许可协议: Creative Commons Attribution 4.0"
+    },
+    jp: { 
+      title: "ペア探し", 
+      easy: "簡単", 
+      norm: "普通", 
+      hard: "難しい", 
+      extr: "エクストリーム", 
+      win: "やったね, あなたの勝ち!", 
+      again: "もう一度遊ぶ", 
+      exit: "終了", 
+      st: "設定", 
+      lang: "言語:", 
+      sndOn: "音楽: オン", 
+      sndOff: "音乐: オフ", 
+      match: "ペアが見つかりました!", 
+      ok: "確定",
+      musicVol: "音楽の音量:",
+      effectsVol: "効果音の音量:",
+      musicTitle: "ゲーム音楽",
+      musicText: "背景音楽: Kevin MacLeod の 'Fluffing a Duck'<br>ライセンス: Creative Commons Attribution 4.0"
+    },
+    am: { 
+      title: "Գտնել զույգերը", 
+      easy: "Հեշտ", 
+      norm: "Նորմալ", 
+      hard: "Դժվար", 
+      extr: "Էքստրիմ", 
+      win: "Ապրես, դու հաղթեցիր:", 
+      again: "Խաղալ նորից", 
+      exit: "Ելք", 
+      st: "Կարգավորումներ", 
+      lang: "Լեզու:", 
+      sndOn: "Երաժշտություն. ՄԻԱՑՎԱԾ", 
+      sndOff: "Երաժշտություն. ԱՆՋԱՏՎԱԾ", 
+      match: "Զույգը գտնված է:", 
+      ok: "Լավ",
+      musicVol: "Երաժշտության բարձրություն:",
+      effectsVol: "էֆեկտների բարձրություն:",
+      musicTitle: "Խաղի երաժշտություն",
+      musicText: "Ետնապլանային երաժշտություն: 'Fluffing a Duck' Kevin MacLeod-ից<br>Լիցենզիա: Creative Commons Attribution 4.0"
+    }
+  };
+
+  let firstCard = null, secondCard = null, lockBoard = false;
+  let matchedPairs = 0, totalPairs = 0, currentCols = 0;
+  let currentLang = 'en', musicEnabled = false;
+  let musicVolume = 0.5;
+  let effectsVolume = 0.7;
+
   const gameBoard = document.getElementById('game-board');
-  const message = document.getElementById('message');
+  const messageBox = document.getElementById('message');
   const modal = document.getElementById('modal');
-  const playAgainBtn = document.getElementById('play-again');
-  const exitBtn = document.getElementById('exit');
-  const difficultyButtons = document.querySelectorAll('#difficulty button');
+  const modalSt = document.getElementById('modal-settings');
+  const soundToggle = document.getElementById('sound-toggle');
+  const langSelect = document.getElementById('lang-select');
+  
   const soundFlip = new Audio('dostavanie_karti.mp3');
   const soundTap = new Audio('tap.mp3');
   const soundMatch = new Audio('pravilna_para.mp3');
-  const soundWin = new Audio('popeda.mp3');
+  const soundWin = new Audio('pobeda.mp3');
   const soundLose = new Audio('proigral.mp3');
+  
+  const bgMusic = new Audio('music.mp3');
+  bgMusic.loop = true;
+  bgMusic.volume = musicVolume;
 
-  function shuffle(array) {
-    for (let i = array.length -1; i>0; i--) {
-      const j = Math.floor(Math.random()*(i+1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
+  function updateVolumes() {
+    bgMusic.volume = musicVolume;
+    soundFlip.volume = effectsVolume;
+    soundTap.volume = effectsVolume;
+    soundMatch.volume = effectsVolume;
+    soundWin.volume = effectsVolume;
+    soundLose.volume = effectsVolume;
   }
 
-  function createCard(symbol, index) {
-    const card = document.createElement('div');
-    card.classList.add('card');
-    card.dataset.symbol = symbol;
-    card.dataset.index = index;
-    const cardInner = document.createElement('div');
-    cardInner.classList.add('card-inner');
-    const cardFront = document.createElement('div');
-    cardFront.classList.add('card-front');
-    cardFront.textContent = symbol;
-    const cardBack = document.createElement('div');
-    cardBack.classList.add('card-back');
-    cardBack.textContent = '❓';
-    cardInner.appendChild(cardFront);
-    cardInner.appendChild(cardBack);
-    card.appendChild(cardInner);
-    card.addEventListener('click', onCardClick);
-    return card;
+  function playEffect(audio) {
+    audio.currentTime = 0;
+    audio.volume = effectsVolume;
+    audio.play().catch(()=>{});
+  }
+
+  function toggleBgMusic() {
+    if (musicEnabled) {
+      bgMusic.play().catch(e => {});
+    } else {
+      bgMusic.pause();
+    }
+  }
+
+  function shuffle(array) {
+    return array.sort(() => Math.random() - 0.5);
+  }
+
+  function shuffleRemaining() {
+    const cards = Array.from(document.querySelectorAll('.card')).filter(c => c.style.opacity !== '0');
+    if (cards.length === 0) return;
+
+    const shuffled = shuffle([...cards]);
+    
+    shuffled.forEach((card, index) => {
+      const row = Math.floor(index / currentCols) + 1;
+      const col = (index % currentCols) + 1;
+      card.style.gridArea = `${row} / ${col} / ${row + 1} / ${col + 1}`;
+      card.style.transform = "scale(1.05)";
+      setTimeout(() => card.style.transform = "scale(1)", 300);
+    });
+  }
+
+  function updateUI() {
+    const t = translations[currentLang] || translations.en;
+    
+    document.getElementById('main-title').textContent = t.title;
+    document.getElementById('btn-easy').textContent = t.easy;
+    document.getElementById('btn-norm').textContent = t.norm;
+    document.getElementById('btn-hard').textContent = t.hard;
+    document.getElementById('btn-extr').textContent = t.extr;
+    document.getElementById('win-text').textContent = t.win;
+    document.getElementById('play-again').textContent = t.again;
+    document.getElementById('exit-win').textContent = t.exit;
+    
+    document.getElementById('st-header').textContent = t.st;
+    document.getElementById('st-lang-label').textContent = t.lang;
+    document.getElementById('close-settings').textContent = t.ok;
+    document.getElementById('music-volume-label').textContent = t.musicVol;
+    document.getElementById('effects-volume-label').textContent = t.effectsVol;
+    document.getElementById('music-title').textContent = t.musicTitle;
+    document.getElementById('music-text').innerHTML = t.musicText;
+    
+    soundToggle.textContent = musicEnabled ? t.sndOn : t.sndOff;
+    
+    document.getElementById('music-volume-value').textContent = Math.round(musicVolume * 100) + '%';
+    document.getElementById('effects-volume-value').textContent = Math.round(effectsVolume * 100) + '%';
+  }
+
+  function showMatchMessage() {
+    const t = translations[currentLang] || translations.en;
+    messageBox.textContent = t.match;
+    messageBox.style.opacity = '1';
+    setTimeout(() => { messageBox.style.opacity = '0'; }, 1200);
   }
 
   function setupBoard(cardsCount) {
     gameBoard.innerHTML = '';
     matchedPairs = 0;
     totalPairs = cardsCount / 2;
-    const symbols = shuffle(cardSymbols).slice(0, totalPairs);
+    const symbols = shuffle([...cardSymbols]).slice(0, totalPairs);
     const cardSet = shuffle([...symbols, ...symbols]);
-    const cols = Math.min(10, Math.ceil(Math.sqrt(cardSet.length)));
-    gameBoard.style.gridTemplateColumns = `repeat(${cols}, 90px)`;
+    currentCols = Math.min(10, Math.ceil(Math.sqrt(cardSet.length)));
+    gameBoard.style.gridTemplateColumns = `repeat(${currentCols}, 90px)`;
+    
     cardSet.forEach((symbol, index) => {
-      const card = createCard(symbol, index);
+      const card = document.createElement('div');
+      card.className = 'card';
+      const row = Math.floor(index / currentCols) + 1;
+      const col = (index % currentCols) + 1;
+      card.style.gridArea = `${row} / ${col} / ${row + 1} / ${col + 1}`;
+      card.innerHTML = `<div class="card-inner"><div class="card-front">${symbol}</div><div class="card-back">❓</div></div>`;
+      card.dataset.symbol = symbol;
+      card.onclick = () => onCardClick(card);
       gameBoard.appendChild(card);
     });
-    firstCard = null;
-    secondCard = null;
-    lockBoard = false;
+    lockBoard = false; firstCard = null;
   }
 
-  function onCardClick(e) {
-    if(lockBoard) return;
-    const clickedCard = e.currentTarget;
-    if(clickedCard === firstCard) return;
-    if(clickedCard.classList.contains('flipped')) return;
-    soundFlip.currentTime = 0;
-    soundFlip.play();
-    clickedCard.classList.add('flipped');
-    if(!firstCard) {
-      firstCard = clickedCard;
-      return;
-    }
-    secondCard = clickedCard;
-    lockBoard = true;
-    if(firstCard.dataset.symbol === secondCard.dataset.symbol) {
-      soundMatch.currentTime = 0;
-      soundMatch.play();
-      firstCard.style.pointerEvents = 'none';
-      secondCard.style.pointerEvents = 'none';
-      matchedPairs++;
-      showMessage('Нашли пару!');
+  function onCardClick(card) {
+    if (lockBoard || card === firstCard || card.classList.contains('flipped') || card.classList.contains('disabled')) return;
+    playEffect(soundFlip);
+    card.classList.add('flipped');
+    if (!firstCard) { firstCard = card; return; }
+    secondCard = card; lockBoard = true;
+
+    if (firstCard.dataset.symbol === secondCard.dataset.symbol) {
+      playEffect(soundMatch);
+      showMatchMessage();
+      const c1 = firstCard; const c2 = secondCard;
+      
+      document.querySelectorAll('.card').forEach(c => {
+        c.classList.add('disabled');
+      });
+      
       setTimeout(() => {
-        firstCard.style.opacity = '0';
-        secondCard.style.opacity = '0';
+        c1.style.transition = 'opacity 1s ease-in-out';
+        c2.style.transition = 'opacity 1s ease-in-out';
+        c1.style.opacity = '0';
+        c2.style.opacity = '0';
+        
         setTimeout(() => {
-          if (firstCard.parentNode) firstCard.parentNode.removeChild(firstCard);
-          if (secondCard.parentNode) secondCard.parentNode.removeChild(secondCard);
-          resetTurn();
-          if(matchedPairs === totalPairs) {
-            soundWin.currentTime = 0;
-            soundWin.play();
-            showModal();
-          }
-        }, 500);
-      }, 2000);
+          c1.style.pointerEvents = 'none';
+          c2.style.pointerEvents = 'none';
+          
+          document.querySelectorAll('.card:not([style*="opacity: 0"])').forEach(c => {
+            c.classList.remove('disabled');
+          });
+          
+          shuffleRemaining();
+        }, 1000);
+      }, 500);
+
+      matchedPairs++;
+      if (matchedPairs === totalPairs) {
+        setTimeout(() => { playEffect(soundWin); modal.classList.add('active'); }, 1500);
+      }
+      lockBoard = false; firstCard = null;
     } else {
-      soundLose.currentTime = 0;
-      soundLose.play();
+      playEffect(soundLose);
       setTimeout(() => {
         firstCard.classList.remove('flipped');
         secondCard.classList.remove('flipped');
-        resetTurn();
+        firstCard = null; lockBoard = false;
       }, 1000);
     }
   }
 
-  function resetTurn() {
-    firstCard = null;
-    secondCard = null;
-    lockBoard = false;
-  }
+  document.querySelectorAll('#difficulty button').forEach(btn => {
+    btn.onclick = () => {
+      playEffect(soundTap);
+      setupBoard(parseInt(btn.dataset.cards));
+      document.querySelectorAll('#difficulty button').forEach(b => b.disabled = false);
+      btn.disabled = true;
+    };
+  });
 
-  function showMessage(text) {
-    message.textContent = text;
-    message.style.opacity = '1';
-    setTimeout(() => {
-      message.style.opacity = '0';
-    }, 1200);
-  }
+  document.getElementById('settings-btn').onclick = () => { 
+    playEffect(soundTap); 
+    modalSt.classList.add('active'); 
+    document.getElementById('music-volume').value = musicVolume * 100;
+    document.getElementById('effects-volume').value = effectsVolume * 100;
+  };
+  
+  document.getElementById('close-settings').onclick = () => { 
+    playEffect(soundTap); 
+    modalSt.classList.remove('active'); 
+  };
+  
+  soundToggle.onclick = () => {
+    musicEnabled = !musicEnabled;
+    playEffect(soundTap);
+    updateUI();
+    toggleBgMusic();
+  };
 
-  function showModal() {
-    modal.classList.add('active');
-  }
+  langSelect.addEventListener('change', (e) => {
+    currentLang = e.target.value;
+    updateUI();
+  });
 
-  function hideModal() {
+  document.getElementById('music-volume').addEventListener('input', (e) => {
+    musicVolume = parseInt(e.target.value) / 100;
+    updateVolumes();
+    document.getElementById('music-volume-value').textContent = e.target.value + '%';
+  });
+
+document.querySelector('.language-select-wrapper').addEventListener('click', () => {
+  playEffect(soundTap);
+});
+
+  document.getElementById('effects-volume').addEventListener('input', (e) => {
+    effectsVolume = parseInt(e.target.value) / 100;
+    updateVolumes();
+    document.getElementById('effects-volume-value').textContent = e.target.value + '%';
+  });
+
+  document.getElementById('music-volume').addEventListener('mousedown', () => {
+    playEffect(soundTap);
+  });
+
+  document.getElementById('effects-volume').addEventListener('mousedown', () => {
+    playEffect(soundTap);
+  });
+
+  document.getElementById('play-again').onclick = () => {
+    playEffect(soundTap);
     modal.classList.remove('active');
-  }
+    const activeDifficulty = Array.from(document.querySelectorAll('#difficulty button')).find(b => b.disabled);
+    setupBoard(activeDifficulty ? parseInt(activeDifficulty.dataset.cards) : 10);
+  };
 
-  difficultyButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      soundTap.currentTime = 0;
-      soundTap.play();
-      setupBoard(parseInt(button.dataset.cards));
-      hideModal();
-      difficultyButtons.forEach(btn => btn.disabled = false);
-      button.disabled = true;
-    });
-  });
-
-  playAgainBtn.addEventListener('click', () => {
-    soundTap.currentTime = 0;
-    soundTap.play();
-    const activeBtn = Array.from(difficultyButtons).find(btn => btn.disabled);
-    const cards = activeBtn ? parseInt(activeBtn.dataset.cards) : 10;
-    setupBoard(cards);
-    hideModal();
-  });
-
-  exitBtn.addEventListener('click', () => {
-    soundTap.currentTime = 0;
-    soundTap.play();
-    window.close();
-  });
+  document.getElementById('exit-win').onclick = () => {
+    playEffect(soundTap);
+    setTimeout(() => { window.close(); }, 150); 
+  };
 
   setupBoard(10);
-  difficultyButtons[0].disabled = true;
+  updateUI();
+  updateVolumes();
 </script>
-
 </body>
 </html>
