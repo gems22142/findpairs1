@@ -341,11 +341,11 @@
     }
 
     .stats-label {
-      font-weight: bold;
-      color: #89f7fe;
-      display: inline-block;
-      width: 140px;
-    }
+  font-weight: bold;
+  color: #e6f7ff;
+  display: inline-block;
+  width: 140px;
+}
 
     .stats-value {
       font-family: 'Courier New', monospace;
@@ -951,6 +951,47 @@ const translations = {
   bgMusic.loop = true;
   bgMusic.volume = musicVolume;
 
+  function loadSettings() {
+    try {
+      const saved = localStorage.getItem('pairsGameSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        currentLang = parsed.language || 'en';
+        musicEnabled = parsed.musicEnabled || false;
+        timerEnabled = parsed.timerEnabled || false;
+        musicVolume = parsed.musicVolume || 0.5;
+        effectsVolume = parsed.effectsVolume || 0.7;
+        
+        langSelect.value = currentLang;
+        document.getElementById('music-volume').value = musicVolume * 100;
+        document.getElementById('effects-volume').value = effectsVolume * 100;
+        
+        if (timerEnabled) {
+          timerContainer.style.display = 'block';
+        }
+        
+        updateVolumes();
+        toggleBgMusic();
+      }
+    } catch (e) {
+      console.log('Failed to load settings');
+    }
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem('pairsGameSettings', JSON.stringify({
+        language: currentLang,
+        musicEnabled: musicEnabled,
+        timerEnabled: timerEnabled,
+        musicVolume: musicVolume,
+        effectsVolume: effectsVolume
+      }));
+    } catch (e) {
+      console.log('Failed to save settings');
+    }
+  }
+
   function loadStats() {
     try {
       const saved = localStorage.getItem('pairsGameStats');
@@ -1152,6 +1193,8 @@ const translations = {
         resetTimer();
         timerContainer.style.display = 'none';
     }
+    
+    saveSettings();
   }
 
   function shuffle(array) {
@@ -1349,6 +1392,7 @@ const translations = {
   document.getElementById('close-settings').onclick = () => { 
     playEffect(soundTap); 
     modalSt.classList.remove('active'); 
+    saveSettings();
     saveStats();
   };
   
@@ -1396,6 +1440,7 @@ const translations = {
     playEffect(soundTap);
     updateUI();
     toggleBgMusic();
+    saveSettings();
   };
 
   timerToggle.onclick = toggleTimer;
@@ -1403,12 +1448,14 @@ const translations = {
   langSelect.addEventListener('change', (e) => {
     currentLang = e.target.value;
     updateUI();
+    saveSettings();
   });
 
   document.getElementById('music-volume').addEventListener('input', (e) => {
     musicVolume = parseInt(e.target.value) / 100;
     updateVolumes();
     document.getElementById('music-volume-value').textContent = e.target.value + '%';
+    saveSettings();
   });
 
   document.querySelector('.language-select-wrapper').addEventListener('click', () => {
@@ -1419,6 +1466,7 @@ const translations = {
     effectsVolume = parseInt(e.target.value) / 100;
     updateVolumes();
     document.getElementById('effects-volume-value').textContent = e.target.value + '%';
+    saveSettings();
   });
 
   document.getElementById('music-volume').addEventListener('mousedown', () => {
@@ -1443,9 +1491,11 @@ const translations = {
 
   window.addEventListener('beforeunload', () => {
     saveStats();
+    saveSettings();
   });
 
   window.addEventListener('load', () => {
+    loadSettings();
     loadStats();
     updateUI();
     updateVolumes();
