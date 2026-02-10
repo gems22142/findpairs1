@@ -73,13 +73,13 @@
     .card-front { background: #fff; transform: rotateY(180deg); }
     .card-back { background: #1e90ff; color: #fff; box-shadow: inset 0 0 20px #1565c0; }
 
-    #modal, #modal-settings {
+    #modal, #modal-settings, #modal-stats, #modal-confirm {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0, 0, 0, 0.6);
       display: flex; align-items: center; justify-content: center;
       opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 2000;
     }
-    #modal.active, #modal-settings.active { opacity: 1; pointer-events: auto; }
+    #modal.active, #modal-settings.active, #modal-stats.active, #modal-confirm.active { opacity: 1; pointer-events: auto; }
 
     .modal-box {
       background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
@@ -164,7 +164,25 @@
       transition: all 0.3s ease;
     }
 
-    #settings-btn:hover {
+    #stats-btn {
+      position: fixed; bottom: 20px; right: 20px; 
+      background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+      border: 2px solid white;
+      border-radius: 50%; 
+      width: 50px; 
+      height: 50px;
+      font-size: 20px; 
+      cursor: pointer; 
+      display: flex;
+      align-items: center; 
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3); 
+      z-index: 1500;
+      color: white;
+      transition: all 0.3s ease;
+    }
+
+    #settings-btn:hover, #stats-btn:hover {
       transform: scale(1.1);
       box-shadow: 0 6px 20px rgba(0,123,255,0.4);
     }
@@ -268,34 +286,76 @@
       animation: fadeInUp 0.4s ease-out;
     }
 
-    .music-disclaimer {
-      margin: 15px 0;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      text-align: center;
-      color: white;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-
-    .music-disclaimer h4 {
-      margin: 0 0 6px 0;
-      font-size: 14px;
-      color: #e6f7ff;
-      font-weight: 700;
-    }
-
-    .music-disclaimer p {
-      margin: 0;
-      opacity: 0.9;
-    }
-
     .music-note {
       font-size: 20px;
       margin-right: 8px;
       vertical-align: middle;
+    }
+
+    .timer-container {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 22px;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      border: 2px solid #fff;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .timer-display {
+      letter-spacing: 2px;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    }
+
+    .stats-display {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 15px;
+      margin: 10px 0;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      text-align: left;
+      font-size: 14px;
+      color: white;
+    }
+
+    .stats-display h3 {
+      margin: 0 0 10px 0;
+      color: #e6f7ff;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    .stats-row {
+      margin: 8px 0;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      border-left: 3px solid #89f7fe;
+    }
+
+    .stats-label {
+      font-weight: bold;
+      color: #89f7fe;
+      display: inline-block;
+      width: 140px;
+    }
+
+    .stats-value {
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+    }
+
+    .stats-time {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      letter-spacing: 1px;
     }
   </style>
 </head>
@@ -310,11 +370,16 @@
   <button data-cards="50" id="btn-extr">Extreme</button>
 </div>
 
-<button id="settings-btn">⚙️</button>
+<button id="settings-btn" title="Settings">⚙️</button>
+<button id="stats-btn" title="Statistics">📊</button>
 
 <div id="game-board"></div>
 
 <div id="message"></div>
+
+<div id="timer-container" class="timer-container">
+  <span id="timer-display" class="timer-display">00:00:00.000</span>
+</div>
 
 <div id="modal">
   <div class="modal-box">
@@ -342,15 +407,10 @@
             <option value="ar" class="language-option">العربية</option>
             <option value="zh" class="language-option">中文</option>
             <option value="jp" class="language-option">日本語</option>
-            <option value="am" class="language-option">Հայերեն</option>
+            <option value="de" class="language-option">Deutsch</option>
           </select>
         </div>
       </div>
-    </div>
-    
-    <div class="music-disclaimer">
-      <h4><span class="music-note">🎵</span><span id="music-title">Музыка в игре</span></h4>
-      <p id="music-text">Фоновая музыка: "Fluffing a Duck" by Kevin MacLeod<br>Лицензия: Creative Commons Attribution 4.0</p>
     </div>
     
     <div class="volume-control">
@@ -368,14 +428,74 @@
     </div>
     
     <button id="sound-toggle" class="game-btn full-width">Music: ON</button>
+    <button id="timer-toggle" class="game-btn full-width">Timer: OFF</button>
     <button id="close-settings" class="game-btn full-width">OK</button>
+  </div>
+</div>
+
+<div id="modal-stats">
+  <div class="modal-box">
+    <h2 id="stats-header">Statistics</h2>
+    
+    <div class="stats-display">
+      <h3 id="stats-title">📈 Game Statistics</h3>
+      
+      <div class="stats-row">
+        <span class="stats-label" id="stats-best-time-label">Best Time:</span>
+        <span class="stats-value stats-time" id="stats-best-time">00:00:00.000</span>
+      </div>
+      
+      <div class="stats-row">
+        <span class="stats-label" id="stats-total-wins-label">Total Wins:</span>
+        <span class="stats-value" id="stats-total-wins">0</span>
+      </div>
+      
+      <div class="stats-row">
+        <span class="stats-label" id="stats-total-games-label">Total Games:</span>
+        <span class="stats-value" id="stats-total-games">0</span>
+      </div>
+      
+      <div class="stats-row">
+        <span class="stats-label" id="stats-win-rate-label">Win Rate:</span>
+        <span class="stats-value" id="stats-win-rate">0%</span>
+      </div>
+      
+      <div class="stats-row">
+        <span class="stats-label" id="stats-play-time-label">Play Time:</span>
+        <span class="stats-value stats-time" id="stats-play-time">0d 0h 0m 0s</span>
+      </div>
+      
+      <div class="stats-row">
+        <span class="stats-label" id="stats-avg-time-label">Average Time:</span>
+        <span class="stats-value stats-time" id="stats-avg-time">00:00:00.000</span>
+      </div>
+      
+      <div class="stats-row">
+        <span class="stats-label" id="stats-last-win-label">Last Win:</span>
+        <span class="stats-value" id="stats-last-win">Never</span>
+      </div>
+    </div>
+    
+    <button id="reset-stats" class="game-btn full-width" style="background-color: #ff6b6b;">Reset Statistics</button>
+    <button id="close-stats" class="game-btn full-width">Close</button>
+  </div>
+</div>
+
+<div id="modal-confirm">
+  <div class="modal-box">
+    <h2 id="confirm-title">Подтвердите действие</h2>
+    <p id="confirm-text">Вы уверены, что хотите сбросить всю статистику?</p>
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button id="confirm-yes" class="game-btn" style="flex: 1; background-color: #28a745;">Да</button>
+      <button id="confirm-no" class="game-btn" style="flex: 1; background-color: #dc3545;">Нет</button>
+    </div>
   </div>
 </div>
 
 <script>
   const cardSymbols = ['🍎','🍌','🍇','🍓','🍍','🥝','🍒','🥥','🍉','🍑','🥭','🍐','🍋','🍊','🍈','🍅','🍆','🥕','🌽','🥔','🥒','🥬','🌶️','🧄','🧅','🍄','🥜','🌰','🥑','🍞','🧀','🍗','🍖','🥩','🍤','🍙','🍚','🥨','🥯','🍔','🍟','🌭','🍕','🥪','🌮','🌯','🥗','🥫','🍦','🍰'];
   
-  const translations = {
+const translations = {
     ru: { 
       title: "Найди пары", 
       easy: "Легко", 
@@ -393,8 +513,29 @@
       ok: "ОК",
       musicVol: "Громкость музыки:",
       effectsVol: "Громкость эффектов:",
-      musicTitle: "Музыка в игре",
-      musicText: "Фоновая музыка: 'Fluffing a Duck' от Kevin MacLeod<br>Лицензия: Creative Commons Attribution 4.0"
+      timerOn: "Таймер: ВКЛ",
+      timerOff: "Таймер: ВЫКЛ",
+      stats: "Статистика",
+      statsTitle: "📈 Статистика игры",
+      bestTime: "Лучшее время:",
+      totalWins: "Всего побед:",
+      totalGames: "Всего игр:",
+      winRate: "Процент побед:",
+      playTime: "Время в игре:",
+      avgTime: "Среднее время:",
+      lastWin: "Последняя победа:",
+      never: "Никогда",
+      resetStats: "Сбросить статистику",
+      close: "Закрыть",
+      confirmTitle: "Подтвердите действие",
+      confirmText: "Вы уверены, что хотите сбросить всю статистику?",
+      yes: "Да",
+      no: "Нет",
+      musicTitle: "Музыка",
+      musicText: "Настройте громкость музыки и эффектов",
+      settingsBtn: "Настройки",
+      statsBtn: "Статистика",
+      timerLabel: "Таймер"
     },
     en: { 
       title: "Find Pairs", 
@@ -413,8 +554,29 @@
       ok: "OK",
       musicVol: "Music Volume:",
       effectsVol: "Effects Volume:",
-      musicTitle: "Game Music",
-      musicText: "Background music: 'Fluffing a Duck' by Kevin MacLeod<br>License: Creative Commons Attribution 4.0"
+      timerOn: "Timer: ON",
+      timerOff: "Timer: OFF",
+      stats: "Statistics",
+      statsTitle: "📈 Game Statistics",
+      bestTime: "Best Time:",
+      totalWins: "Total Wins:",
+      totalGames: "Total Games:",
+      winRate: "Win Rate:",
+      playTime: "Play Time:",
+      avgTime: "Average Time:",
+      lastWin: "Last Win:",
+      never: "Never",
+      resetStats: "Reset Statistics",
+      close: "Close",
+      confirmTitle: "Confirm Action",
+      confirmText: "Are you sure you want to reset all statistics?",
+      yes: "Yes",
+      no: "No",
+      musicTitle: "Music",
+      musicText: "Adjust music and effects volume",
+      settingsBtn: "Settings",
+      statsBtn: "Statistics",
+      timerLabel: "Timer"
     },
     ua: { 
       title: "Знайди пари", 
@@ -433,8 +595,29 @@
       ok: "Добре",
       musicVol: "Гучність музики:",
       effectsVol: "Гучність ефектів:",
-      musicTitle: "Музика в грі",
-      musicText: "Фонова музика: 'Fluffing a Duck' від Kevin MacLeod<br>Ліцензія: Creative Commons Attribution 4.0"
+      timerOn: "Таймер: ВКЛ",
+      timerOff: "Таймер: ВИМК",
+      stats: "Статистика",
+      statsTitle: "📈 Статистика гри",
+      bestTime: "Найкращий час:",
+      totalWins: "Всього перемог:",
+      totalGames: "Всього ігор:",
+      winRate: "Відсоток перемог:",
+      playTime: "Час гри:",
+      avgTime: "Середній час:",
+      lastWin: "Остання перемога:",
+      never: "Ніколи",
+      resetStats: "Скинути статистику",
+      close: "Закрити",
+      confirmTitle: "Підтвердіть дію",
+      confirmText: "Ви впевнені, що хочете скинути всю статистику?",
+      yes: "Так",
+      no: "Ні",
+      musicTitle: "Музика",
+      musicText: "Налаштуйте гучність музики та ефектів",
+      settingsBtn: "Налаштування",
+      statsBtn: "Статистика",
+      timerLabel: "Таймер"
     },
     by: { 
       title: "Знайдзі пары", 
@@ -453,8 +636,29 @@
       ok: "ОК",
       musicVol: "Гучнасць музыкі:",
       effectsVol: "Гучнасць эфектаў:",
-      musicTitle: "Музыка ў гульні",
-      musicText: "Фонавая музыка: 'Fluffing a Duck' ад Kevin MacLeod<br>Ліцэнзія: Creative Commons Attribution 4.0"
+      timerOn: "Таймер: ВКЛ",
+      timerOff: "Таймер: ВЫКЛ",
+      stats: "Статыстыка",
+      statsTitle: "📈 Статыстыка гульні",
+      bestTime: "Лепшы час:",
+      totalWins: "Усяго перамог:",
+      totalGames: "Усяго гульняў:",
+      winRate: "Адсотак перамог:",
+      playTime: "Час гульні:",
+      avgTime: "Сярэдні час:",
+      lastWin: "Апошняя перамога:",
+      never: "Ніколі",
+      resetStats: "Скінуць статыстыку",
+      close: "Закрыць",
+      confirmTitle: "Пацвердзіце дзеянне",
+      confirmText: "Вы ўпэўнены, што хочаце скінуць усю статыстыку?",
+      yes: "Так",
+      no: "Не",
+      musicTitle: "Музыка",
+      musicText: "Наладзьце гучнасць музыкі і эфектаў",
+      settingsBtn: "Налады",
+      statsBtn: "Статыстыка",
+      timerLabel: "Таймер"
     },
     it: { 
       title: "Trova le coppie", 
@@ -473,8 +677,29 @@
       ok: "OK",
       musicVol: "Volume Musica:",
       effectsVol: "Volume Effetti:",
-      musicTitle: "Musica nel gioco",
-      musicText: "Musica di sottofondo: 'Fluffing a Duck' di Kevin MacLeod<br>Licenza: Creative Commons Attribution 4.0"
+      timerOn: "Timer: ON",
+      timerOff: "Timer: OFF",
+      stats: "Statistiche",
+      statsTitle: "📈 Statistiche di Gioco",
+      bestTime: "Miglior tempo:",
+      totalWins: "Vittorie totali:",
+      totalGames: "Partite totali:",
+      winRate: "Percentuale vittorie:",
+      playTime: "Tempo di gioco:",
+      avgTime: "Tempo medio:",
+      lastWin: "Ultima vittoria:",
+      never: "Mai",
+      resetStats: "Reset Statistiche",
+      close: "Chiudi",
+      confirmTitle: "Conferma Azione",
+      confirmText: "Sei sicuro di voler resettare tutte le statistiche?",
+      yes: "Sì",
+      no: "No",
+      musicTitle: "Musica",
+      musicText: "Regola il volume della musica e degli effetti",
+      settingsBtn: "Impostazioni",
+      statsBtn: "Statistiche",
+      timerLabel: "Timer"
     },
     es: { 
       title: "Encontrar pares", 
@@ -493,8 +718,29 @@
       ok: "Aceptar",
       musicVol: "Volumen Música:",
       effectsVol: "Volumen Efectos:",
-      musicTitle: "Música del juego",
-      musicText: "Música de fondo: 'Fluffing a Duck' por Kevin MacLeod<br>Licencia: Creative Commons Attribution 4.0"
+      timerOn: "Timer: ON",
+      timerOff: "Timer: OFF",
+      stats: "Estadísticas",
+      statsTitle: "📈 Estadísticas del Juego",
+      bestTime: "Mejor tiempo:",
+      totalWins: "Victorias totales:",
+      totalGames: "Juegos totales:",
+      winRate: "Porcentaje victorias:",
+      playTime: "Tiempo jugado:",
+      avgTime: "Tiempo promedio:",
+      lastWin: "Última victoria:",
+      never: "Nunca",
+      resetStats: "Restablecer estadísticas",
+      close: "Cerrar",
+      confirmTitle: "Confirmar Acción",
+      confirmText: "¿Estás seguro de que quieres restablecer todas las estadísticas?",
+      yes: "Sí",
+      no: "No",
+      musicTitle: "Música",
+      musicText: "Ajusta el volumen de la música y los efectos",
+      settingsBtn: "Ajustes",
+      statsBtn: "Estadísticas",
+      timerLabel: "Temporizador"
     },
     ar: { 
       title: "البحث عن الأزواج", 
@@ -513,8 +759,29 @@
       ok: "موافق",
       musicVol: "مستوى صوت الموسيقى:",
       effectsVol: "مستوى صوت المؤثرات:",
-      musicTitle: "موسيقى اللعبة",
-      musicText: "موسيقى الخلفية: 'Fluffing a Duck' بواسطة Kevin MacLeod<br>الترخيص: Creative Commons Attribution 4.0"
+      timerOn: "الموقت: تشغيل",
+      timerOff: "الموقت: إيقاف",
+      stats: "الإحصائيات",
+      statsTitle: "📈 إحصائيات اللعبة",
+      bestTime: "أفضل وقت:",
+      totalWins: "إجمالي الانتصارات:",
+      totalGames: "إجمالي الألعاب:",
+      winRate: "معدل الفوز:",
+      playTime: "وقت اللعب:",
+      avgTime: "متوسط الوقت:",
+      lastWin: "آخر فوز:",
+      never: "أبداً",
+      resetStats: "إعادة تعيين الإحصائيات",
+      close: "إغلاق",
+      confirmTitle: "تأكيد الإجراء",
+      confirmText: "هل أنت متأكد من أنك تريد إعادة تعيين جميع الإحصائيات?",
+      yes: "نعم",
+      no: "لا",
+      musicTitle: "موسيقى",
+      musicText: "ضبط مستوى صوت الموسيقى والمؤثرات",
+      settingsBtn: "الإعدادات",
+      statsBtn: "الإحصائيات",
+      timerLabel: "الموقت"
     },
     zh: { 
       title: "配对游戏", 
@@ -533,8 +800,29 @@
       ok: "确定",
       musicVol: "音乐音量:",
       effectsVol: "效果音量:",
-      musicTitle: "游戏音乐",
-      musicText: "背景音乐: Kevin MacLeod 的 'Fluffing a Duck'<br>许可协议: Creative Commons Attribution 4.0"
+      timerOn: "计时器: 开启",
+      timerOff: "计时器: 关闭",
+      stats: "统计",
+      statsTitle: "📈 游戏统计",
+      bestTime: "最佳时间:",
+      totalWins: "总胜利:",
+      totalGames: "总游戏:",
+      winRate: "胜率:",
+      playTime: "游戏时间:",
+      avgTime: "平均时间:",
+      lastWin: "最后胜利:",
+      never: "从未",
+      resetStats: "重置统计",
+      close: "关闭",
+      confirmTitle: "确认操作",
+      confirmText: "您确定要重置所有统计吗?",
+      yes: "是",
+      no: "否",
+      musicTitle: "音乐",
+      musicText: "调整音乐和效果音量",
+      settingsBtn: "设置",
+      statsBtn: "统计",
+      timerLabel: "计时器"
     },
     jp: { 
       title: "ペア探し", 
@@ -548,58 +836,237 @@
       st: "設定", 
       lang: "言語:", 
       sndOn: "音楽: オン", 
-      sndOff: "音乐: オフ", 
+      sndOff: "音楽: オフ", 
       match: "ペアが見つかりました!", 
-      ok: "確定",
+      ok: "確認",
       musicVol: "音楽の音量:",
       effectsVol: "効果音の音量:",
-      musicTitle: "ゲーム音楽",
-      musicText: "背景音楽: Kevin MacLeod の 'Fluffing a Duck'<br>ライセンス: Creative Commons Attribution 4.0"
+      timerOn: "タイマー: オン",
+      timerOff: "タイマー: オフ",
+      stats: "統計",
+      statsTitle: "📈 ゲーム統計",
+      bestTime: "ベストタイム:",
+      totalWins: "総勝利数:",
+      totalGames: "総ゲーム数:",
+      winRate: "勝率:",
+      playTime: "プレイ時間:",
+      avgTime: "平均時間:",
+      lastWin: "最終勝利:",
+      never: "一度もない",
+      resetStats: "統計をリセット",
+      close: "閉じる",
+      confirmTitle: "アクションを確認",
+      confirmText: "すべての統計をリセットしてもよろしいですか?",
+      yes: "はい",
+      no: "いいえ",
+      musicTitle: "音楽",
+      musicText: "音楽と効果音の音量を調整",
+      settingsBtn: "設定",
+      statsBtn: "統計",
+      timerLabel: "タイマー"
     },
-    am: { 
-      title: "Գտնել զույգերը", 
-      easy: "Հեշտ", 
-      norm: "Նորմալ", 
-      hard: "Դժվար", 
-      extr: "Էքստրիմ", 
-      win: "Ապրես, դու հաղթեցիր:", 
-      again: "Խաղալ նորից", 
-      exit: "Ելք", 
-      st: "Կարգավորումներ", 
-      lang: "Լեզու:", 
-      sndOn: "Երաժշտություն. ՄԻԱՑՎԱԾ", 
-      sndOff: "Երաժշտություն. ԱՆՋԱՏՎԱԾ", 
-      match: "Զույգը գտնված է:", 
-      ok: "Լավ",
-      musicVol: "Երաժշտության բարձրություն:",
-      effectsVol: "էֆեկտների բարձրություն:",
-      musicTitle: "Խաղի երաժշտություն",
-      musicText: "Ետնապլանային երաժշտություն: 'Fluffing a Duck' Kevin MacLeod-ից<br>Լիցենզիա: Creative Commons Attribution 4.0"
+    de: { 
+      title: "Paare finden", 
+      easy: "Einfach", 
+      norm: "Normal", 
+      hard: "Schwer", 
+      extr: "Extrem", 
+      win: "Gut gemacht, du hast gewonnen!", 
+      again: "Nochmal spielen", 
+      exit: "Beenden", 
+      st: "Einstellungen", 
+      lang: "Sprache:", 
+      sndOn: "Musik: EIN", 
+      sndOff: "Musik: AUS", 
+      match: "Paar gefunden!", 
+      ok: "OK",
+      musicVol: "Musiklautstärke:",
+      effectsVol: "Effektlautstärke:",
+      timerOn: "Timer: EIN",
+      timerOff: "Timer: AUS",
+      stats: "Statistiken",
+      statsTitle: "📈 Spielstatistiken",
+      bestTime: "Beste Zeit:",
+      totalWins: "Gesamtsiege:",
+      totalGames: "Gesamtspiele:",
+      winRate: "Gewinnrate:",
+      playTime: "Spielzeit:",
+      avgTime: "Durchschnittszeit:",
+      lastWin: "Letzter Sieg:",
+      never: "Nie",
+      resetStats: "Statistiken zurücksetzen",
+      close: "Schließen",
+      confirmTitle: "Aktion bestätigen",
+      confirmText: "Sind Sie sicher, dass Sie alle Statistiken zurücksetzen möchten?",
+      yes: "Ja",
+      no: "Nein",
+      musicTitle: "Musik",
+      musicText: "Musik- und Effektlautstärke einstellen",
+      settingsBtn: "Einstellungen",
+      statsBtn: "Statistiken",
+      timerLabel: "Timer"
     }
   };
 
   let firstCard = null, secondCard = null, lockBoard = false;
   let matchedPairs = 0, totalPairs = 0, currentCols = 0;
-  let currentLang = 'en', musicEnabled = false;
-  let musicVolume = 0.5;
-  let effectsVolume = 0.7;
+  let currentLang = 'en', musicEnabled = false, timerEnabled = false, timerRunning = false;
+  let musicVolume = 0.5, effectsVolume = 0.7;
+  let timerStartTime = 0, timerInterval = null, elapsedTime = 0;
+  let gameStarted = false;
+  
+  let stats = {
+    bestTime: Infinity,
+    totalWins: 0,
+    totalGames: 0,
+    totalPlayTime: 0,
+    gameTimes: [],
+    lastWinTime: null,
+    sessionStartTime: Date.now()
+  };
 
   const gameBoard = document.getElementById('game-board');
   const messageBox = document.getElementById('message');
   const modal = document.getElementById('modal');
   const modalSt = document.getElementById('modal-settings');
+  const modalStats = document.getElementById('modal-stats');
+  const modalConfirm = document.getElementById('modal-confirm');
   const soundToggle = document.getElementById('sound-toggle');
+  const timerToggle = document.getElementById('timer-toggle');
   const langSelect = document.getElementById('lang-select');
+  const timerContainer = document.getElementById('timer-container');
+  const statsBtn = document.getElementById('stats-btn');
+  const resetStatsBtn = document.getElementById('reset-stats');
+  const confirmYesBtn = document.getElementById('confirm-yes');
+  const confirmNoBtn = document.getElementById('confirm-no');
   
   const soundFlip = new Audio('dostavanie_karti.mp3');
   const soundTap = new Audio('tap.mp3');
   const soundMatch = new Audio('pravilna_para.mp3');
   const soundWin = new Audio('pobeda.mp3');
   const soundLose = new Audio('proigral.mp3');
+  const soundWarning = new Audio('warning.mp3');
   
   const bgMusic = new Audio('music.mp3');
   bgMusic.loop = true;
   bgMusic.volume = musicVolume;
+
+  function loadStats() {
+    try {
+      const saved = localStorage.getItem('pairsGameStats');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        stats.bestTime = parsed.bestTime || Infinity;
+        stats.totalWins = parsed.totalWins || 0;
+        stats.totalGames = parsed.totalGames || 0;
+        stats.totalPlayTime = parsed.totalPlayTime || 0;
+        stats.gameTimes = parsed.gameTimes || [];
+        stats.lastWinTime = parsed.lastWinTime || null;
+        stats.sessionStartTime = Date.now();
+        
+        updateStatsDisplay();
+      }
+    } catch (e) {
+      console.log('Failed to load stats');
+    }
+  }
+
+  function saveStats() {
+    try {
+      const totalPlayTimeWithCurrent = stats.totalPlayTime + (Date.now() - stats.sessionStartTime);
+      
+      localStorage.setItem('pairsGameStats', JSON.stringify({
+        bestTime: stats.bestTime,
+        totalWins: stats.totalWins,
+        totalGames: stats.totalGames,
+        totalPlayTime: totalPlayTimeWithCurrent,
+        gameTimes: stats.gameTimes,
+        lastWinTime: stats.lastWinTime
+      }));
+    } catch (e) {
+      console.log('Failed to save stats');
+    }
+  }
+
+  function formatTime(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const milliseconds = ms % 1000;
+    
+    if (hours > 0) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0').slice(0, 3)}`;
+    } else {
+      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0').slice(0, 3)}`;
+    }
+  }
+
+  function formatPlayTime(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
+  function updateStatsDisplay() {
+    const t = translations[currentLang] || translations.en;
+    
+    document.getElementById('stats-header').textContent = t.stats;
+    document.getElementById('stats-title').textContent = t.statsTitle;
+    document.getElementById('stats-best-time-label').textContent = t.bestTime;
+    document.getElementById('stats-total-wins-label').textContent = t.totalWins;
+    document.getElementById('stats-total-games-label').textContent = t.totalGames;
+    document.getElementById('stats-win-rate-label').textContent = t.winRate;
+    document.getElementById('stats-play-time-label').textContent = t.playTime;
+    document.getElementById('stats-avg-time-label').textContent = t.avgTime;
+    document.getElementById('stats-last-win-label').textContent = t.lastWin;
+    document.getElementById('reset-stats').textContent = t.resetStats;
+    document.getElementById('close-stats').textContent = t.close;
+    
+    document.getElementById('confirm-title').textContent = t.confirmTitle;
+    document.getElementById('confirm-text').textContent = t.confirmText;
+    document.getElementById('confirm-yes').textContent = t.yes;
+    document.getElementById('confirm-no').textContent = t.no;
+    
+    const bestTime = stats.bestTime === Infinity ? "00:00:00.000" : formatTime(stats.bestTime);
+    document.getElementById('stats-best-time').textContent = bestTime;
+    
+    document.getElementById('stats-total-wins').textContent = stats.totalWins;
+    document.getElementById('stats-total-games').textContent = stats.totalGames;
+    
+    const winRate = stats.totalGames > 0 ? Math.round((stats.totalWins / stats.totalGames) * 100) : 0;
+    document.getElementById('stats-win-rate').textContent = `${winRate}%`;
+    
+    const currentPlayTime = stats.totalPlayTime + (Date.now() - stats.sessionStartTime);
+    document.getElementById('stats-play-time').textContent = formatPlayTime(currentPlayTime);
+    
+    const avgTime = stats.gameTimes.length > 0 ? 
+      formatTime(stats.gameTimes.reduce((a, b) => a + b, 0) / stats.gameTimes.length) : 
+      "00:00:00.000";
+    document.getElementById('stats-avg-time').textContent = avgTime;
+    
+    const lastWin = stats.lastWinTime ? 
+      new Date(stats.lastWinTime).toLocaleDateString() + ' ' + new Date(stats.lastWinTime).toLocaleTimeString() : 
+      t.never;
+    document.getElementById('stats-last-win').textContent = lastWin;
+  }
+
+  function updateStatsInterval() {
+    updateStatsDisplay();
+    setTimeout(updateStatsInterval, 1000);
+  }
 
   function updateVolumes() {
     bgMusic.volume = musicVolume;
@@ -608,6 +1075,7 @@
     soundMatch.volume = effectsVolume;
     soundWin.volume = effectsVolume;
     soundLose.volume = effectsVolume;
+    soundWarning.volume = effectsVolume;
   }
 
   function playEffect(audio) {
@@ -621,6 +1089,68 @@
       bgMusic.play().catch(e => {});
     } else {
       bgMusic.pause();
+    }
+  }
+
+  function updateTimerDisplay() {
+    if (!timerEnabled) return;
+    
+    const timerDisplay = document.getElementById('timer-display');
+    
+    if (timerRunning) {
+      const now = Date.now();
+      elapsedTime = now - timerStartTime;
+    }
+    
+    const totalMs = elapsedTime;
+    const hours = Math.floor(totalMs / 3600000);
+    const minutes = Math.floor((totalMs % 3600000) / 60000);
+    const seconds = Math.floor((totalMs % 60000) / 1000);
+    const milliseconds = totalMs % 1000;
+    
+    timerDisplay.textContent = 
+      `${hours.toString().padStart(2, '0')}:` +
+      `${minutes.toString().padStart(2, '0')}:` +
+      `${seconds.toString().padStart(2, '0')}.` +
+      `${milliseconds.toString().padStart(3, '0').slice(0, 3)}`;
+  }
+
+  function startTimer() {
+    if (!timerEnabled || timerRunning || !gameStarted) return;
+    timerStartTime = Date.now();
+    timerRunning = true;
+    timerContainer.style.display = 'block';
+    
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimerDisplay, 50);
+  }
+
+  function stopTimer() {
+    timerRunning = false;
+    gameStarted = false;
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  function resetTimer() {
+    stopTimer();
+    elapsedTime = 0;
+    updateTimerDisplay();
+  }
+
+  function toggleTimer() {
+    timerEnabled = !timerEnabled;
+    playEffect(soundTap);
+    updateUI();
+    
+    if (timerEnabled) {
+        resetTimer();
+        timerContainer.style.display = 'block';
+    } else {
+        resetTimer();
+        timerContainer.style.display = 'none';
     }
   }
 
@@ -660,13 +1190,17 @@
     document.getElementById('close-settings').textContent = t.ok;
     document.getElementById('music-volume-label').textContent = t.musicVol;
     document.getElementById('effects-volume-label').textContent = t.effectsVol;
-    document.getElementById('music-title').textContent = t.musicTitle;
-    document.getElementById('music-text').innerHTML = t.musicText;
     
     soundToggle.textContent = musicEnabled ? t.sndOn : t.sndOff;
+    timerToggle.textContent = timerEnabled ? t.timerOn : t.timerOff;
     
     document.getElementById('music-volume-value').textContent = Math.round(musicVolume * 100) + '%';
     document.getElementById('effects-volume-value').textContent = Math.round(effectsVolume * 100) + '%';
+    
+    document.getElementById('settings-btn').title = t.settingsBtn;
+    document.getElementById('stats-btn').title = t.statsBtn;
+    
+    updateStatsDisplay();
   }
 
   function showMatchMessage() {
@@ -680,6 +1214,7 @@
     gameBoard.innerHTML = '';
     matchedPairs = 0;
     totalPairs = cardsCount / 2;
+    gameStarted = false;
     const symbols = shuffle([...cardSymbols]).slice(0, totalPairs);
     const cardSet = shuffle([...symbols, ...symbols]);
     currentCols = Math.min(10, Math.ceil(Math.sqrt(cardSet.length)));
@@ -696,20 +1231,40 @@
       card.onclick = () => onCardClick(card);
       gameBoard.appendChild(card);
     });
-    lockBoard = false; firstCard = null;
+    lockBoard = false; 
+    firstCard = null;
+    
+    if (timerEnabled) {
+      resetTimer();
+    }
   }
 
   function onCardClick(card) {
     if (lockBoard || card === firstCard || card.classList.contains('flipped') || card.classList.contains('disabled')) return;
+    
+    if (!gameStarted) {
+      gameStarted = true;
+      if (timerEnabled && !timerRunning) {
+        startTimer();
+      }
+    }
+    
     playEffect(soundFlip);
     card.classList.add('flipped');
-    if (!firstCard) { firstCard = card; return; }
-    secondCard = card; lockBoard = true;
+    
+    if (!firstCard) { 
+      firstCard = card; 
+      return; 
+    }
+    
+    secondCard = card; 
+    lockBoard = true;
 
     if (firstCard.dataset.symbol === secondCard.dataset.symbol) {
       playEffect(soundMatch);
       showMatchMessage();
-      const c1 = firstCard; const c2 = secondCard;
+      const c1 = firstCard; 
+      const c2 = secondCard;
       
       document.querySelectorAll('.card').forEach(c => {
         c.classList.add('disabled');
@@ -735,15 +1290,38 @@
 
       matchedPairs++;
       if (matchedPairs === totalPairs) {
-        setTimeout(() => { playEffect(soundWin); modal.classList.add('active'); }, 1500);
+        stopTimer();
+        
+        stats.totalGames++;
+        stats.totalWins++;
+        
+        if (timerEnabled) {
+          const gameTime = elapsedTime;
+          stats.gameTimes.push(gameTime);
+          
+          if (gameTime < stats.bestTime) {
+            stats.bestTime = gameTime;
+          }
+        }
+        
+        stats.lastWinTime = Date.now();
+        saveStats();
+        updateStatsDisplay();
+        
+        setTimeout(() => { 
+          playEffect(soundWin); 
+          modal.classList.add('active'); 
+        }, 1500);
       }
-      lockBoard = false; firstCard = null;
+      lockBoard = false; 
+      firstCard = null;
     } else {
       playEffect(soundLose);
       setTimeout(() => {
         firstCard.classList.remove('flipped');
         secondCard.classList.remove('flipped');
-        firstCard = null; lockBoard = false;
+        firstCard = null; 
+        lockBoard = false;
       }, 1000);
     }
   }
@@ -754,6 +1332,10 @@
       setupBoard(parseInt(btn.dataset.cards));
       document.querySelectorAll('#difficulty button').forEach(b => b.disabled = false);
       btn.disabled = true;
+      
+      stats.totalGames++;
+      saveStats();
+      updateStatsDisplay();
     };
   });
 
@@ -767,6 +1349,46 @@
   document.getElementById('close-settings').onclick = () => { 
     playEffect(soundTap); 
     modalSt.classList.remove('active'); 
+    saveStats();
+  };
+  
+  statsBtn.onclick = () => {
+    playEffect(soundTap);
+    modalStats.classList.add('active');
+  };
+  
+  document.getElementById('close-stats').onclick = () => {
+    playEffect(soundTap);
+    modalStats.classList.remove('active');
+  };
+  
+  resetStatsBtn.onclick = () => {
+    playEffect(soundTap);
+    modalStats.classList.remove('active');
+    modalConfirm.classList.add('active');
+    playEffect(soundWarning);
+  };
+  
+  confirmYesBtn.onclick = () => {
+    playEffect(soundTap);
+    stats = {
+      bestTime: Infinity,
+      totalWins: 0,
+      totalGames: 0,
+      totalPlayTime: 0,
+      gameTimes: [],
+      lastWinTime: null,
+      sessionStartTime: Date.now()
+    };
+    saveStats();
+    updateStatsDisplay();
+    modalConfirm.classList.remove('active');
+  };
+  
+  confirmNoBtn.onclick = () => {
+    playEffect(soundTap);
+    modalConfirm.classList.remove('active');
+    modalStats.classList.add('active');
   };
   
   soundToggle.onclick = () => {
@@ -775,6 +1397,8 @@
     updateUI();
     toggleBgMusic();
   };
+
+  timerToggle.onclick = toggleTimer;
 
   langSelect.addEventListener('change', (e) => {
     currentLang = e.target.value;
@@ -787,9 +1411,9 @@
     document.getElementById('music-volume-value').textContent = e.target.value + '%';
   });
 
-document.querySelector('.language-select-wrapper').addEventListener('click', () => {
-  playEffect(soundTap);
-});
+  document.querySelector('.language-select-wrapper').addEventListener('click', () => {
+    playEffect(soundTap);
+  });
 
   document.getElementById('effects-volume').addEventListener('input', (e) => {
     effectsVolume = parseInt(e.target.value) / 100;
@@ -817,9 +1441,18 @@ document.querySelector('.language-select-wrapper').addEventListener('click', () 
     setTimeout(() => { window.close(); }, 150); 
   };
 
+  window.addEventListener('beforeunload', () => {
+    saveStats();
+  });
+
+  window.addEventListener('load', () => {
+    loadStats();
+    updateUI();
+    updateVolumes();
+    updateStatsInterval();
+  });
+
   setupBoard(10);
-  updateUI();
-  updateVolumes();
 </script>
 </body>
 </html>
