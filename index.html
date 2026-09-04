@@ -302,9 +302,6 @@
       transform: scale(1.05);
       box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6);
     }
-      color: white;
-      transition: all 0.3s ease;
-    }
 
     #settings-btn:hover, #stats-btn:hover {
       transform: scale(1.1);
@@ -677,7 +674,7 @@
     <button class="game-btn full-width bot-diff-btn" data-diff="medium" data-bot-key="nexus" id="bot-btn-nexus">⚙️ Нексус (Стратег)</button>
     <button class="game-btn full-width bot-diff-btn" data-diff="hard" data-bot-key="neo" id="bot-btn-neo">⚡ Нео (Профи)</button>
     <button class="game-btn full-width bot-diff-btn" data-diff="hard" data-bot-key="alpha" id="bot-btn-alpha">🎯 Альфа (Знаток)</button>
-    <button class="game-btn full-width bot-diff-btn" data-diff="expert" data-bot-key="cyber" id="bot-btn-cyber">🦾 Кибер-Мозг (Эксперт)</button>
+    <button class="game-btn full-width bot-diff-btn" data-diff="expert" data-bot-key="cyber" id="bot-btn-cyber">🦾 Кибер-Мозок (Эксперт)</button>
     <button class="game-btn full-width bot-diff-btn" data-diff="expert" data-bot-key="omega" id="bot-btn-omega">🌌 ИИ-Омега (Непобедимый)</button>
   </div>
 </div>
@@ -716,7 +713,7 @@
       botTurn: "Ход бота...", raceResults: "⏱️ Результаты гонки", youLost: "Ты проиграл!", you: "Ты",
       gd12: "Легко (12 карт)", gd20: "Нормально (20 карт)", gd30: "Сложно (30 карт)", gd42: "Экстрим (42 карты)",
       botRobi: "🤖 Роби (Новичок)", botPixel: "👾 Пиксель (Ученик)", botMax: "🧠 Макс (Любитель)", botNexus: "⚙️ Нексус (Стратег)",
-      botNeo: "⚡ Нео (Профи)", botAlpha: "🎯 Альфа (Знаток)", botCyber: "🦾 Кибер-Мозг (Эксперт)", botOmega: "🌌 ИИ-Омега (Непобедимый)"
+      botNeo: "⚡ Нео (Профи)", botAlpha: "🎯 Альфа (Знаток)", botCyber: "🦾 Кибер-Мозок (Эксперт)", botOmega: "🌌 ИИ-Омега (Непобедимый)"
     },
     en: { 
       title: "Find Pairs", easy: "Easy", norm: "Normal", hard: "Hard", extr: "Extreme", 
@@ -994,6 +991,8 @@
       
       if (timerEnabled || isBotMode) {
         timerContainer.style.display = 'block';
+      } else {
+        timerContainer.style.display = 'none';
       }
       
       updateVolumes();
@@ -1198,8 +1197,8 @@
   }
 
   function startTimer() {
-    if (timerRunning || !gameStarted) return;
-    timerStartTime = Date.now();
+    if (timerRunning) return;
+    timerStartTime = Date.now() - elapsedTime;
     timerRunning = true;
     timerContainer.style.display = 'block';
     
@@ -1228,11 +1227,15 @@
     updateUI();
     
     if (timerEnabled || isBotMode) {
-        resetTimer();
         timerContainer.style.display = 'block';
+        if (gameStarted && !timerRunning) {
+            startTimer();
+        }
     } else {
-        resetTimer();
         timerContainer.style.display = 'none';
+        if (!isBotMode) {
+            resetTimer();
+        }
     }
     
     saveSettings();
@@ -1366,9 +1369,11 @@
     lockBoard = false; 
     firstCard = null;
     
+    resetTimer();
     if (timerEnabled || isBotMode) {
-        resetTimer();
         timerContainer.style.display = 'block';
+    } else {
+        timerContainer.style.display = 'none';
     }
   }
 
@@ -1533,7 +1538,7 @@
     
     if (!gameStarted) {
       gameStarted = true;
-      if ((timerEnabled || isBotMode) && !timerRunning) {
+      if (timerEnabled || isBotMode) {
         startTimer();
       }
     }
@@ -1670,7 +1675,6 @@
     gameStarted = false;
     matchedPairs = 0;
     isBotMode = false;
-    botTurnRunning = false;
     updateExitBtnColor();
     document.querySelectorAll('#difficulty button').forEach(b => b.classList.remove('pressed'));
     document.getElementById('btn-easy').classList.add('pressed');
@@ -1779,7 +1783,12 @@
 
   document.getElementById('exit-win').onclick = () => {
     playEffect(soundTap);
-    setTimeout(() => { window.close(); }, 150); 
+    modal.classList.remove('active');
+    isBotMode = false;
+    updateExitBtnColor();
+    document.querySelectorAll('#difficulty button').forEach(b => b.classList.remove('pressed'));
+    document.getElementById('btn-easy').classList.add('pressed');
+    setupBoard(12);
   };
 
   window.addEventListener('beforeunload', () => {
