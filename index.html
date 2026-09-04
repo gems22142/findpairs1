@@ -7,7 +7,7 @@
 <link rel="manifest" href="site.webmanifest">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Найди пары</title>
+  <title>Find Pairs</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
     * { box-sizing: border-box; }
@@ -37,7 +37,12 @@
       transition: all 0.3s ease;
     }
     #difficulty button:hover, .game-btn:hover { background: #0056b3; transform: translateY(-2px); }
-    #difficulty button:disabled { background: #5a96d4; cursor: default; transform: none; }
+    #difficulty button:active { transform: scale(0.95); }
+    #difficulty button.pressed { 
+      transform: scale(0.95); 
+      background: #0056b3;
+      box-shadow: 0 2px 5px rgba(0,123,255,0.4), inset 0 2px 5px rgba(0,0,0,0.2);
+    }
 
     #game-board {
       display: grid;
@@ -47,13 +52,14 @@
       margin-top: 15px; 
       margin-bottom: 20px;
       transition: all 0.5s ease-in-out;
+      flex: 1;
     }
     .card { 
       width: 90px; 
       height: 120px; 
       perspective: 1000px; 
       cursor: pointer;
-      transition: opacity 0.6s ease, transform 0.5s ease-in-out, grid-area 0.5s ease-in-out;
+      transition: transform 0.5s ease-in-out, opacity 0.8s ease-in-out;
     }
     .card.disabled {
       cursor: not-allowed;
@@ -64,7 +70,13 @@
       transition: transform 0.5s; transform-style: preserve-3d;
       border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     }
-    .card.flipped .card-inner { transform: rotateY(180deg); }
+    .card.flipped .card-inner, .card.matched .card-inner { transform: rotateY(180deg); }
+    
+    .card.matched-fade {
+      opacity: 0;
+      pointer-events: none;
+    }
+
     .card-front, .card-back {
       position: absolute; width: 100%; height: 100%;
       border-radius: 12px; backface-visibility: hidden;
@@ -73,78 +85,161 @@
     .card-front { background: #fff; transform: rotateY(180deg); }
     .card-back { background: #1e90ff; color: #fff; box-shadow: inset 0 0 20px #1565c0; }
 
-    #modal, #modal-settings, #modal-stats, #modal-confirm {
+    #modal, #modal-settings, #modal-stats, #modal-confirm, #modal-bot-game-diff, #modal-bot-diff, #modal-next-player, #modal-results-banner {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0, 0, 0, 0.6);
       display: flex; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 2000;
+      opacity: 0; pointer-events: none; transition: opacity 0.5s ease; z-index: 1000;
     }
-    #modal.active, #modal-settings.active, #modal-stats.active, #modal-confirm.active { opacity: 1; pointer-events: auto; }
+    #modal.active, #modal-settings.active, #modal-stats.active, #modal-confirm.active, #modal-bot-game-diff.active, #modal-bot-diff.active, #modal-next-player.active, #modal-results-banner.active { opacity: 1; pointer-events: auto; }
 
     .modal-box {
       background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
-      padding: 20px 40px; max-width: 420px; width: 90%; text-align: center;
+      padding: 20px 40px; max-width: 440px; width: 90%; text-align: center;
       border-radius: 20px; border: 3px solid white; box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+      margin: 0 auto;
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
     }
 
     .modal-box h2 { 
       margin-top: 0;
       margin-bottom: 15px; 
       font-weight: 700; 
-      font-size: 28px; 
+      font-size: 25px; 
       color: #fff; 
       text-shadow: 2px 2px 4px rgba(0,0,0,0.3); 
+    }
+
+    .results-text {
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      line-height: 1.6;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
     }
     
     .st-row { margin: 10px 0; text-align: left; }
     .st-row label { display: block; margin-bottom: 5px; font-weight: bold; color: #fff; }
     
-    .language-container {
+    .custom-select-wrapper {
       position: relative;
+      user-select: none;
       width: 100%;
     }
-    
-    .language-select-wrapper {
+
+    .custom-select {
       position: relative;
       width: 100%;
-    }
-    
-    #lang-select {
-      width: 100%; 
-      padding: 15px 20px;
-      font-size: 18px; 
-      border-radius: 12px;
-      font-family: 'Montserrat', sans-serif; 
-      border: 2px solid white;
-      background: rgba(255, 255, 255, 0.95);
-      cursor: pointer;
-      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-      color: #333;
+      padding: 14px 20px;
+      font-size: 17px;
+      border-radius: 14px;
+      font-family: 'Montserrat', sans-serif;
       font-weight: 600;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.95);
+      color: #333;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(102, 166, 255, 0.2);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    
-    #lang-select:hover {
+
+    .custom-select:hover {
+      background: #ffffff;
+      border-color: #ffffff;
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
-      background: white;
-      border-color: #66a6ff;
+      box-shadow: 0 6px 25px rgba(102, 166, 255, 0.4);
+    }
+
+    .custom-select::after {
+      content: '▼';
+      font-size: 12px;
+      transition: transform 0.3s ease;
+      color: #66a6ff;
+    }
+
+    .custom-select.open::after {
+      transform: rotate(180deg);
+    }
+
+    .custom-options {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #76e4ff 0%, #4c8fff 100%);
+      border-radius: 14px;
+      border: 2px solid white;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      opacity: 0;
+      max-height: 0;
+      pointer-events: none;
+      transition: all 0.3s ease-in-out;
+      z-index: 999;
+    }
+
+    .custom-options.open {
+      opacity: 1;
+      max-height: 250px;
+      pointer-events: auto;
+      overflow-y: auto;
+    }
+
+    .custom-option {
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s ease, padding-left 0.2s ease;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .custom-option:hover {
+      background: rgba(255, 255, 255, 0.25);
+      padding-left: 25px;
+    }
+
+    .custom-option.selected {
+      background: rgba(255, 255, 255, 0.35);
+      font-weight: 700;
     }
     
-    #lang-select:focus {
-      outline: none;
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 10px 30px rgba(102, 166, 255, 0.4);
-      border-color: #007bff;
-    }
-    
-    .full-width { width: 100%; margin: 10px 0 !important; }
+    .full-width { width: 100%; margin: 6px 0 !important; }
     #play-again { background-color: #28a745; }
     #exit-win { background-color: #dc3545; }
     #sound-toggle { background-color: #17a2b8; }
+
+    #bot-mode-btn {
+      position: fixed; bottom: 20px; left: 20px;
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      border: 2px solid white;
+      border-radius: 20px / 50%;
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(37, 117, 252, 0.4);
+      z-index: 100;
+      color: white;
+      transition: all 0.3s ease;
+    }
+
+    #bot-mode-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(37, 117, 252, 0.6);
+    }
 
     #settings-btn {
       position: fixed; top: 20px; right: 20px; 
@@ -159,7 +254,7 @@
       align-items: center; 
       justify-content: center;
       box-shadow: 0 4px 15px rgba(0,123,255,0.3); 
-      z-index: 1500;
+      z-index: 100;
       color: white;
       transition: all 0.3s ease;
     }
@@ -177,7 +272,36 @@
       align-items: center; 
       justify-content: center;
       box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3); 
-      z-index: 1500;
+      z-index: 100;
+    }
+
+    #exit-game-btn {
+      position: fixed; bottom: 20px; left: 20px;
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      border: 2px solid white;
+      border-radius: 20px / 50%;
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+      z-index: 100;
+      color: white;
+      transition: all 0.3s ease;
+    }
+
+    #exit-game-btn.visible {
+      display: flex;
+    }
+
+    #exit-game-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6);
+    }
       color: white;
       transition: all 0.3s ease;
     }
@@ -191,8 +315,16 @@
       position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
       background: rgba(50, 50, 50, 0.9); color: #fff; padding: 12px 24px;
       border-radius: 12px; font-size: 22px; font-weight: bold;
-      opacity: 0; transition: opacity 0.5s ease; z-index: 3000;
+      opacity: 0; transition: opacity 0.5s ease; z-index: 2000;
       pointer-events: none; border: 2px solid #fff;
+    }
+
+    .confirm-text-style {
+      font-weight: 600;
+      font-size: 20px;
+      color: #fff;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      margin: 10px 0 20px 0;
     }
 
     .volume-control {
@@ -286,32 +418,24 @@
       animation: fadeInUp 0.4s ease-out;
     }
 
-    .music-note {
-      font-size: 20px;
-      margin-right: 8px;
-      vertical-align: middle;
-    }
-
     .timer-container {
       position: fixed;
       top: 20px;
       left: 20px;
-      background: rgba(0, 0, 0, 0.7);
       color: #fff;
-      padding: 12px 20px;
-      border-radius: 12px;
+      padding: 8px 16px;
       font-size: 22px;
       font-weight: bold;
       font-family: 'Courier New', monospace;
-      border: 2px solid #fff;
       display: none;
-      z-index: 1000;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      z-index: 100;
+      letter-spacing: 3px;
+      text-shadow: 0 0 30px rgba(137, 247, 254, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5);
     }
 
     .timer-display {
-      letter-spacing: 2px;
-      text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+      color: #fff;
+      font-weight: 700;
     }
 
     .stats-display {
@@ -338,24 +462,55 @@
       background: rgba(255, 255, 255, 0.05);
       border-radius: 8px;
       border-left: 3px solid #89f7fe;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .stats-label {
-  font-weight: bold;
-  color: #e6f7ff;
-  display: inline-block;
-  width: 140px;
-}
+      font-weight: bold;
+      color: #e6f7ff;
+      display: inline-block;
+      min-width: 140px;
+    }
 
     .stats-value {
       font-family: 'Courier New', monospace;
       font-weight: bold;
+      text-align: right;
     }
 
     .stats-time {
       font-family: 'Courier New', monospace;
       font-size: 13px;
       letter-spacing: 1px;
+    }
+
+    .footer {
+      position: relative;
+      width: 100%;
+      color: #fff;
+      text-align: center;
+      padding: 12px 15px;
+      font-size: 13px;
+      z-index: 50;
+      font-weight: 600;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+      margin-top: auto;
+    }
+
+    .footer a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      transition: all 0.3s ease;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .footer a:hover {
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 2px 2px 4px rgba(0, 0, 0, 0.4);
+      transform: scale(1.05);
+      display: inline-block;
     }
   </style>
 </head>
@@ -364,14 +519,16 @@
 <h1 id="main-title">Find Pairs</h1>
 
 <div id="difficulty">
-  <button data-cards="10" id="btn-easy">Easy</button>
+  <button data-cards="12" id="btn-easy">Easy</button>
   <button data-cards="20" id="btn-norm">Normal</button>
   <button data-cards="30" id="btn-hard">Hard</button>
-  <button data-cards="50" id="btn-extr">Extreme</button>
+  <button data-cards="42" id="btn-extr">Extreme</button>
 </div>
 
+<button id="bot-mode-btn">🤖 Играть с ботом</button>
 <button id="settings-btn" title="Settings">⚙️</button>
 <button id="stats-btn" title="Statistics">📊</button>
+<button id="exit-game-btn">🚪 Выход</button>
 
 <div id="game-board"></div>
 
@@ -394,21 +551,20 @@
     <h2 id="st-header">Settings</h2>
     
     <div class="st-row">
-      <label id="st-lang-label">Language:</label>
-      <div class="language-container">
-        <div class="language-select-wrapper">
-          <select id="lang-select">
-            <option value="ru" class="language-option">Русский</option>
-            <option value="en" selected class="language-option">English</option>
-            <option value="ua" class="language-option">Українська</option>
-            <option value="by" class="language-option">Беларуская</option>
-            <option value="it" class="language-option">Italiano</option>
-            <option value="es" class="language-option">Español</option>
-            <option value="ar" class="language-option">العربية</option>
-            <option value="zh" class="language-option">中文</option>
-            <option value="jp" class="language-option">日本語</option>
-            <option value="de" class="language-option">Deutsch</option>
-          </select>
+      <label id="st-lang-label" style="color: #fff; font-weight: 700; font-size: 16px; text-shadow: 1px 1px 3px rgba(0,0,0,0.3); margin-bottom: 8px; display: block;">Language:</label>
+      <div class="custom-select-wrapper">
+        <div class="custom-select" id="custom-lang-select">English</div>
+        <div class="custom-options" id="custom-lang-options">
+          <div class="custom-option" data-value="ru">Русский</div>
+          <div class="custom-option selected" data-value="en">English</div>
+          <div class="custom-option" data-value="ua">Українська</div>
+          <div class="custom-option" data-value="by">Беларуская</div>
+          <div class="custom-option" data-value="it">Italiano</div>
+          <div class="custom-option" data-value="es">Español</div>
+          <div class="custom-option" data-value="ar">العربية</div>
+          <div class="custom-option" data-value="zh">中文</div>
+          <div class="custom-option" data-value="jp">日本語</div>
+          <div class="custom-option" data-value="de">Deutsch</div>
         </div>
       </div>
     </div>
@@ -444,20 +600,30 @@
         <span class="stats-label" id="stats-best-time-label">Best Time:</span>
         <span class="stats-value stats-time" id="stats-best-time">00:00:00.000</span>
       </div>
+
+      <div class="stats-row">
+        <span class="stats-label" id="stats-best-time-bot-label">Best Time (Bot):</span>
+        <span class="stats-value stats-time" id="stats-best-time-bot">00:00:00.000</span>
+      </div>
       
       <div class="stats-row">
         <span class="stats-label" id="stats-total-wins-label">Total Wins:</span>
         <span class="stats-value" id="stats-total-wins">0</span>
       </div>
-      
+
       <div class="stats-row">
-        <span class="stats-label" id="stats-total-games-label">Total Games:</span>
-        <span class="stats-value" id="stats-total-games">0</span>
+        <span class="stats-label" id="stats-bot-wins-label">Wins vs Bot:</span>
+        <span class="stats-value" id="stats-bot-wins">0</span>
       </div>
-      
+            
       <div class="stats-row">
         <span class="stats-label" id="stats-win-rate-label">Win Rate:</span>
         <span class="stats-value" id="stats-win-rate">0%</span>
+      </div>
+
+      <div class="stats-row">
+        <span class="stats-label" id="stats-win-rate-bot-label">Win Rate (Bot):</span>
+        <span class="stats-value" id="stats-win-rate-bot">0%</span>
       </div>
       
       <div class="stats-row">
@@ -469,10 +635,10 @@
         <span class="stats-label" id="stats-avg-time-label">Average Time:</span>
         <span class="stats-value stats-time" id="stats-avg-time">00:00:00.000</span>
       </div>
-      
+
       <div class="stats-row">
-        <span class="stats-label" id="stats-last-win-label">Last Win:</span>
-        <span class="stats-value" id="stats-last-win">Never</span>
+        <span class="stats-label" id="stats-avg-time-bot-label">Average Time (Bot):</span>
+        <span class="stats-value stats-time" id="stats-avg-time-bot">00:00:00.000</span>
       </div>
     </div>
     
@@ -484,443 +650,243 @@
 <div id="modal-confirm">
   <div class="modal-box">
     <h2 id="confirm-title">Подтвердите действие</h2>
-    <p id="confirm-text">Вы уверены, что хотите сбросить всю статистику?</p>
-    <div style="display: flex; gap: 10px; margin-top: 20px;">
+     <p id="confirm-text" class="confirm-text-style">Вы уверены, что хотите сбросить всю статистику?</p>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
       <button id="confirm-yes" class="game-btn" style="flex: 1; background-color: #28a745;">Да</button>
       <button id="confirm-no" class="game-btn" style="flex: 1; background-color: #dc3545;">Нет</button>
     </div>
   </div>
 </div>
 
+<div id="modal-bot-game-diff">
+  <div class="modal-box">
+    <h2 id="bot-game-diff-title">Выберите сложность игры</h2>
+    <button class="game-btn full-width bot-game-diff-btn" data-cards="12" id="bot-gd-12">Легко (12 карт)</button>
+    <button class="game-btn full-width bot-game-diff-btn" data-cards="20" id="bot-gd-20">Нормально (20 карт)</button>
+    <button class="game-btn full-width bot-game-diff-btn" data-cards="30" id="bot-gd-30">Сложно (30 карт)</button>
+    <button class="game-btn full-width bot-game-diff-btn" data-cards="42" id="bot-gd-42">Экстрим (42 карты)</button>
+  </div>
+</div>
+
+<div id="modal-bot-diff">
+  <div class="modal-box">
+    <h2 id="bot-diff-title">Выберите соперника</h2>
+    <button class="game-btn full-width bot-diff-btn" data-diff="easy" data-bot-key="robi" id="bot-btn-robi">🤖 Роби (Новичок)</button>
+    <button class="game-btn full-width bot-diff-btn" data-diff="easy" data-bot-key="pixel" id="bot-btn-pixel">👾 Пиксель (Ученик)</button>
+    <button class="game-btn full-width bot-diff-btn" data-diff="medium" data-bot-key="max" id="bot-btn-max">🧠 Макс (Любитель)</button>
+    <button class="game-btn full-width bot-diff-btn" data-diff="medium" data-bot-key="nexus" id="bot-btn-nexus">⚙️ Нексус (Стратег)</button>
+    <button class="game-btn full-width bot-diff-btn" data-diff="hard" data-bot-key="neo" id="bot-btn-neo">⚡ Нео (Профи)</button>
+    <button class="game-btn full-width bot-diff-btn" data-diff="hard" data-bot-key="alpha" id="bot-btn-alpha">🎯 Альфа (Знаток)</button>
+    <button class="game-btn full-width bot-diff-btn" data-diff="expert" data-bot-key="cyber" id="bot-btn-cyber">🦾 Кибер-Мозг (Эксперт)</button>
+    <button class="game-btn full-width bot-diff-btn" data-diff="expert" data-bot-key="omega" id="bot-btn-omega">🌌 ИИ-Омега (Непобедимый)</button>
+  </div>
+</div>
+
+<div id="modal-next-player">
+  <div class="modal-box">
+    <h2 id="next-player-text">Ход бота...</h2>
+  </div>
+</div>
+
+<div id="modal-results-banner">
+  <div class="modal-box">
+    <h2 id="results-banner-title">⏱️ Результаты гонки</h2>
+    <div id="results-banner-content" class="results-text"></div>
+  </div>
+</div>
+
+<div class="footer">
+  🎵 Background music created with <a href="https://www.suno.ai/" target="_blank">Suno AI</a>
+</div>
+
 <script>
-  const cardSymbols = ['🍎','🍌','🍇','🍓','🍍','🥝','🍒','🥥','🍉','🍑','🥭','🍐','🍋','🍊','🍈','🍅','🍆','🥕','🌽','🥔','🥒','🥬','🌶️','🧄','🧅','🍄','🥜','🌰','🥑','🍞','🧀','🍗','🍖','🥩','🍤','🍙','🍚','🥨','🥯','🍔','🍟','🌭','🍕','🥪','🌮','🌯','🥗','🥫','🍦','🍰'];
+  const cardSymbols = ['🍎','🍌','🍇','🍓','🍍','🥝','🍒','🥥','🍉','🍑','🥭','🍐','🍋','🍊','🍈','🍅','🍆','🥕','🌽','🥔','🥒','🥬','🌶️','🧄','🧅','🍄','🥜','🌰','🥑','🍞','🧀','🍗','🍖','🥩','🍙','🍚','🥨','🥯','🍔','🍟','🌭','🍕','🥪','🌮','🌯','🥗','🍦','🍰'];
   
-const translations = {
+  const translations = {
     ru: { 
-      title: "Найди пары", 
-      easy: "Легко", 
-      norm: "Нормально", 
-      hard: "Сложно", 
-      extr: "Экстрим", 
-      win: "Молодец, ты выиграл!", 
-      again: "Играть ещё раз", 
-      exit: "Выйти", 
-      st: "Настройки", 
-      lang: "Язык:", 
-      sndOn: "Музыка: ВКЛ", 
-      sndOff: "Музыка: ВЫКЛ", 
-      match: "Пара найдена!", 
-      ok: "ОК",
-      musicVol: "Громкость музыки:",
-      effectsVol: "Громкость эффектов:",
-      timerOn: "Таймер: ВКЛ",
-      timerOff: "Таймер: ВЫКЛ",
-      stats: "Статистика",
-      statsTitle: "📈 Статистика игры",
-      bestTime: "Лучшее время:",
-      totalWins: "Всего побед:",
-      totalGames: "Всего игр:",
-      winRate: "Процент побед:",
-      playTime: "Время в игре:",
-      avgTime: "Среднее время:",
-      lastWin: "Последняя победа:",
-      never: "Никогда",
-      resetStats: "Сбросить статистику",
-      close: "Закрыть",
-      confirmTitle: "Подтвердите действие",
-      confirmText: "Вы уверены, что хотите сбросить всю статистику?",
-      yes: "Да",
-      no: "Нет",
-      musicTitle: "Музыка",
-      musicText: "Настройте громкость музыки и эффектов",
-      settingsBtn: "Настройки",
-      statsBtn: "Статистика",
-      timerLabel: "Таймер"
+      title: "Найди пары", easy: "Легко", norm: "Нормально", hard: "Сложно", extr: "Экстрим", 
+      win: "Молодец, ты выиграл!", again: "Играть ещё раз", exit: "Выйти", st: "Настройки", 
+      lang: "Язык:", sndOn: "Музыка: ВКЛ", sndOff: "Музыка: ВЫКЛ", match: "Пара найдена!", ok: "ОК",
+      musicVol: "Громкость музыки:", effectsVol: "Громкость эффектов:", timerOn: "Таймер: ВКЛ", timerOff: "Таймер: ВЫКЛ",
+      stats: "Статистика", statsTitle: "📈 Статистика игры", bestTime: "Лучшее время:", bestTimeBot: "Лучшее время против бота:", totalWins: "Всего побед:", botWins: "Побед над ботом:",
+      winRate: "Процент побед:", winRateBot: "Процент побед над ботом:", playTime: "Время в игре:", avgTime: "Среднее время:", avgTimeBot: "Среднее время против бота:", resetStats: "Сбросить статистику",
+      close: "Закрыть", confirmTitle: "Подтвердите действие", confirmText: "Вы уверены, что хотите сбросить всю статистику?",
+      yes: "Да", no: "Нет", settingsBtn: "Настройки", statsBtn: "Статистика", creditMusic: "🎵 Музыка создана с помощью",
+      playWithBot: "🤖 Играть с ботом (бета)", selectGameDiff: "Выберите сложность игры", selectOpponent: "Выберите соперника",
+      botTurn: "Ход бота...", raceResults: "⏱️ Результаты гонки", youLost: "Ты проиграл!", you: "Ты",
+      gd12: "Легко (12 карт)", gd20: "Нормально (20 карт)", gd30: "Сложно (30 карт)", gd42: "Экстрим (42 карты)",
+      botRobi: "🤖 Роби (Новичок)", botPixel: "👾 Пиксель (Ученик)", botMax: "🧠 Макс (Любитель)", botNexus: "⚙️ Нексус (Стратег)",
+      botNeo: "⚡ Нео (Профи)", botAlpha: "🎯 Альфа (Знаток)", botCyber: "🦾 Кибер-Мозг (Эксперт)", botOmega: "🌌 ИИ-Омега (Непобедимый)"
     },
     en: { 
-      title: "Find Pairs", 
-      easy: "Easy", 
-      norm: "Normal", 
-      hard: "Hard", 
-      extr: "Extreme", 
-      win: "Well done, you won!", 
-      again: "Play Again", 
-      exit: "Exit", 
-      st: "Settings", 
-      lang: "Language:", 
-      sndOn: "Music: ON", 
-      sndOff: "Music: OFF", 
-      match: "Match found!", 
-      ok: "OK",
-      musicVol: "Music Volume:",
-      effectsVol: "Effects Volume:",
-      timerOn: "Timer: ON",
-      timerOff: "Timer: OFF",
-      stats: "Statistics",
-      statsTitle: "📈 Game Statistics",
-      bestTime: "Best Time:",
-      totalWins: "Total Wins:",
-      totalGames: "Total Games:",
-      winRate: "Win Rate:",
-      playTime: "Play Time:",
-      avgTime: "Average Time:",
-      lastWin: "Last Win:",
-      never: "Never",
-      resetStats: "Reset Statistics",
-      close: "Close",
-      confirmTitle: "Confirm Action",
-      confirmText: "Are you sure you want to reset all statistics?",
-      yes: "Yes",
-      no: "No",
-      musicTitle: "Music",
-      musicText: "Adjust music and effects volume",
-      settingsBtn: "Settings",
-      statsBtn: "Statistics",
-      timerLabel: "Timer"
+      title: "Find Pairs", easy: "Easy", norm: "Normal", hard: "Hard", extr: "Extreme", 
+      win: "Well done, you won!", again: "Play Again", exit: "Exit", st: "Settings", 
+      lang: "Language:", sndOn: "Music: ON", sndOff: "Music: OFF", match: "Match found!", ok: "OK",
+      musicVol: "Music Volume:", effectsVol: "Effects Volume:", timerOn: "Timer: ON", timerOff: "Timer: OFF",
+      stats: "Statistics", statsTitle: "📈 Game Statistics", bestTime: "Best Time:", bestTimeBot: "Best Time vs Bot:", totalWins: "Total Wins:", botWins: "Wins vs Bot:",
+      winRate: "Win Rate:", winRateBot: "Win Rate vs Bot:", playTime: "Play Time:", avgTime: "Average Time:", avgTimeBot: "Average Time vs Bot:", resetStats: "Reset Statistics",
+      close: "Close", confirmTitle: "Confirm Action", confirmText: "Are you sure you want to reset all statistics?",
+      yes: "Yes", no: "No", settingsBtn: "Settings", statsBtn: "Statistics", creditMusic: "🎵 Background music created with",
+      playWithBot: "🤖 Play vs Bot (beta)", selectGameDiff: "Select Game Difficulty", selectOpponent: "Select Opponent",
+      botTurn: "Bot's Turn...", raceResults: "⏱️ Race Results", youLost: "You Lost!", you: "You",
+      gd12: "Easy (12 cards)", gd20: "Normal (20 cards)", gd30: "Hard (30 cards)", gd42: "Extreme (42 cards)",
+      botRobi: "🤖 Robi (Novice)", botPixel: "👾 Pixel (Apprentice)", botMax: "🧠 Max (Amateur)", botNexus: "⚙️ Nexus (Strategist)",
+      botNeo: "⚡ Neo (Pro)", botAlpha: "🎯 Alpha (Expert)", botCyber: "🦾 Cyber-Mind (Master)", botOmega: "🌌 AI-Omega (Invincible)"
     },
     ua: { 
-      title: "Знайди пари", 
-      easy: "Легко", 
-      norm: "Нормально", 
-      hard: "Складно", 
-      extr: "Екстрим", 
-      win: "Молодець, ти виграв!", 
-      again: "Грати ще раз", 
-      exit: "Вийти", 
-      st: "Налаштування", 
-      lang: "Мова:", 
-      sndOn: "Музика: ВКЛ", 
-      sndOff: "Музика: ВИМК", 
-      match: "Пару знайдено!", 
-      ok: "Добре",
-      musicVol: "Гучність музики:",
-      effectsVol: "Гучність ефектів:",
-      timerOn: "Таймер: ВКЛ",
-      timerOff: "Таймер: ВИМК",
-      stats: "Статистика",
-      statsTitle: "📈 Статистика гри",
-      bestTime: "Найкращий час:",
-      totalWins: "Всього перемог:",
-      totalGames: "Всього ігор:",
-      winRate: "Відсоток перемог:",
-      playTime: "Час гри:",
-      avgTime: "Середній час:",
-      lastWin: "Остання перемога:",
-      never: "Ніколи",
-      resetStats: "Скинути статистику",
-      close: "Закрити",
-      confirmTitle: "Підтвердіть дію",
-      confirmText: "Ви впевнені, що хочете скинути всю статистику?",
-      yes: "Так",
-      no: "Ні",
-      musicTitle: "Музика",
-      musicText: "Налаштуйте гучність музики та ефектів",
-      settingsBtn: "Налаштування",
-      statsBtn: "Статистика",
-      timerLabel: "Таймер"
+      title: "Знайди пари", easy: "Легко", norm: "Нормально", hard: "Складно", extr: "Екстрим", 
+      win: "Молодець, ти виграв!", again: "Грати ще раз", exit: "Вийти", st: "Налаштування", 
+      lang: "Мова:", sndOn: "Музика: УВІМК", sndOff: "Музика: ВИМК", match: "Пару знайдено!", ok: "Добре",
+      musicVol: "Гучність музики:", effectsVol: "Гучність ефектів:", timerOn: "Таймер: УВІМК", timerOff: "Таймер: ВИМК",
+      stats: "Статистика", statsTitle: "📈 Ігрова статистика", bestTime: "Найкращий час:", bestTimeBot: "Кращий час проти бота:", totalWins: "Всього перемог:", botWins: "Перемог проти бота:",
+      winRate: "Відсоток перемог:", winRateBot: "Відсоток перемог проти бота:", playTime: "Час у грі:", avgTime: "Середній час:", avgTimeBot: "Середній час проти бота:", resetStats: "Скинути статистику",
+      close: "Закрити", confirmTitle: "Підтвердіть дію", confirmText: "Ви впевнені, що хочете скинути всю статистику?",
+      yes: "Так", no: "Ні", settingsBtn: "Налаштування", statsBtn: "Статистика", creditMusic: "🎵 Музика створена за допомогою",
+      playWithBot: "🤖 Грати з ботом (бета)", selectGameDiff: "Оберіть складність гри", selectOpponent: "Оберіть суперника",
+      botTurn: "Хід бота...", raceResults: "⏱️ Результати гонки", youLost: "Ти програв!", you: "Ти",
+      gd12: "Легко (12 карт)", gd20: "Нормально (20 карт)", gd30: "Складно (30 карт)", gd42: "Екстрим (42 карти)",
+      botRobi: "🤖 Робі (Новачок)", botPixel: "👾 Піксель (Учень)", botMax: "🧠 Макс (Любитель)", botNexus: "⚙️ Нексус (Стратег)",
+      botNeo: "⚡ Нео (Профі)", botAlpha: "🎯 Альфа (Знавець)", botCyber: "🦾 Кібер-Мозок (Експерт)", botOmega: "🌌 ШІ-Омега (Непереможний)"
     },
     by: { 
-      title: "Знайдзі пары", 
-      easy: "Лёгка", 
-      norm: "Нармальна", 
-      hard: "Складана", 
-      extr: "Экстрым", 
-      win: "Маладзец, ты выйграў!", 
-      again: "Гуляць яшчэ раз", 
-      exit: "Выйсці", 
-      st: "Налады", 
-      lang: "Мова:", 
-      sndOn: "Музыка: ВКЛ", 
-      sndOff: "Музыка: ВЫКЛ", 
-      match: "Пара знойдзена!", 
-      ok: "ОК",
-      musicVol: "Гучнасць музыкі:",
-      effectsVol: "Гучнасць эфектаў:",
-      timerOn: "Таймер: ВКЛ",
-      timerOff: "Таймер: ВЫКЛ",
-      stats: "Статыстыка",
-      statsTitle: "📈 Статыстыка гульні",
-      bestTime: "Лепшы час:",
-      totalWins: "Усяго перамог:",
-      totalGames: "Усяго гульняў:",
-      winRate: "Адсотак перамог:",
-      playTime: "Час гульні:",
-      avgTime: "Сярэдні час:",
-      lastWin: "Апошняя перамога:",
-      never: "Ніколі",
-      resetStats: "Скінуць статыстыку",
-      close: "Закрыць",
-      confirmTitle: "Пацвердзіце дзеянне",
-      confirmText: "Вы ўпэўнены, што хочаце скінуць усю статыстыку?",
-      yes: "Так",
-      no: "Не",
-      musicTitle: "Музыка",
-      musicText: "Наладзьце гучнасць музыкі і эфектаў",
-      settingsBtn: "Налады",
-      statsBtn: "Статыстыка",
-      timerLabel: "Таймер"
+      title: "Знайдзі пары", easy: "Лёгка", norm: "Нармальна", hard: "Складана", extr: "Экстрым", 
+      win: "Маладзец, ты выйграў!", again: "Гуляць яшчэ раз", exit: "Выйсці", st: "Налады", 
+      lang: "Мова:", sndOn: "Музыка: ВКЛ", sndOff: "Музыка: ВЫКЛ", match: "Пара знойдзена!", ok: "ОК",
+      musicVol: "Гучнасць музыкі:", effectsVol: "Гучнасць эфектаў:", timerOn: "Таймер: ВКЛ", timerOff: "Таймер: ВЫКЛ",
+      stats: "Статыстыка", statsTitle: "📈 Статыстыка гульні", bestTime: "Лепшы час:", bestTimeBot: "Лепшы час супроць бота:", totalWins: "Усяго перамог:", botWins: "Перамог супроць бота:",
+      winRate: "Адсотак перамог:", winRateBot: "Адсотак перамог супроць бота:", playTime: "Час гульні:", avgTime: "Сярэдні час:", avgTimeBot: "Сярэдні час супроць бота:", resetStats: "Скінуць статыстыку",
+      close: "Закрыць", confirmTitle: "Пацвердзіце дзеянне", confirmText: "Вы ўпэўненыя, што хочаце скінуць усю статыстыку?",
+      yes: "Так", no: "Не", settingsBtn: "Налады", statsBtn: "Статыстыка", creditMusic: "🎵 Музыка створана з дапамогай",
+      playWithBot: "🤖 Гуляць з ботам (бэта)", selectGameDiff: "Выберыце складанасць гульні", selectOpponent: "Выберыце саперніка",
+      botTurn: "Ход бота...", raceResults: "⏱️ Вынікі гонкі", youLost: "Ты прайграў!", you: "Ты",
+      gd12: "Лёгка (12 карт)", gd20: "Нармальна (20 карт)", gd30: "Складана (30 карт)", gd42: "Экстрым (42 карты)",
+      botRobi: "🤖 Робі (Пачатковец)", botPixel: "👾 Піксель (Вучань)", botMax: "🧠 Макс (Аматар)", botNexus: "⚙️ Нексус (Стратэг)",
+      botNeo: "⚡ Нео (Профі)", botAlpha: "🎯 Альфа (Знаўца)", botCyber: "🦾 Кібер-Мозг (Эксперт)", botOmega: "🌌 ШІ-Амега (Непераможны)"
     },
     it: { 
-      title: "Trova le coppie", 
-      easy: "Facile", 
-      norm: "Normale", 
-      hard: "Difficile", 
-      extr: "Estremo", 
-      win: "Bravo, hai vinto!", 
-      again: "Gioca ancora", 
-      exit: "Esci", 
-      st: "Impostazioni", 
-      lang: "Lingua:", 
-      sndOn: "Musica: ON", 
-      sndOff: "Musica: OFF", 
-      match: "Coppia trovata!", 
-      ok: "OK",
-      musicVol: "Volume Musica:",
-      effectsVol: "Volume Effetti:",
-      timerOn: "Timer: ON",
-      timerOff: "Timer: OFF",
-      stats: "Statistiche",
-      statsTitle: "📈 Statistiche di Gioco",
-      bestTime: "Miglior tempo:",
-      totalWins: "Vittorie totali:",
-      totalGames: "Partite totali:",
-      winRate: "Percentuale vittorie:",
-      playTime: "Tempo di gioco:",
-      avgTime: "Tempo medio:",
-      lastWin: "Ultima vittoria:",
-      never: "Mai",
-      resetStats: "Reset Statistiche",
-      close: "Chiudi",
-      confirmTitle: "Conferma Azione",
-      confirmText: "Sei sicuro di voler resettare tutte le statistiche?",
-      yes: "Sì",
-      no: "No",
-      musicTitle: "Musica",
-      musicText: "Regola il volume della musica e degli effetti",
-      settingsBtn: "Impostazioni",
-      statsBtn: "Statistiche",
-      timerLabel: "Timer"
+      title: "Trova le coppie", easy: "Facile", norm: "Normale", hard: "Difficile", extr: "Estremo", 
+      win: "Bravo, hai vinto!", again: "Gioca ancora", exit: "Esci", st: "Impostazioni", 
+      lang: "Lingua:", sndOn: "Musica: ON", sndOff: "Musica: OFF", match: "Coppia trovata!", ok: "OK",
+      musicVol: "Volume Musica:", effectsVol: "Volume Effetti:", timerOn: "Timer: ON", timerOff: "Timer: OFF",
+      stats: "Statistiche", statsTitle: "📈 Statistiche di Gioco", bestTime: "Miglior tempo:", bestTimeBot: "Miglior tempo contro il Bot:", totalWins: "Vittorie totali:", botWins: "Vittorie contro il Bot:",
+      winRate: "Percentuale vittorie:", winRateBot: "Percentuale vittorie contro il Bot:", playTime: "Tempo di gioco:", avgTime: "Tempo medio:", avgTimeBot: "Tempo medio contro il Bot:", resetStats: "Reset Statistiche",
+      close: "Chiudi", confirmTitle: "Conferma Azione", confirmText: "Sei sicuro di voler resettare tutte le statistiche?",
+      yes: "Sì", no: "No", settingsBtn: "Impostazioni", statsBtn: "Statistiche", creditMusic: "🎵 Musica creata con",
+      playWithBot: "🤖 Gioca contro il Bot (beta)", selectGameDiff: "Seleziona Difficoltà Gioco", selectOpponent: "Seleziona Avversario",
+      botTurn: "Mossa del bot...", raceResults: "⏱️ Risultati della Gara", youLost: "Hai perso!", you: "Tu",
+      gd12: "Facile (12 carte)", gd20: "Normale (20 carte)", gd30: "Difficile (30 carte)", gd42: "Estremo (42 carte)",
+      botRobi: "🤖 Robi (Principiante)", botPixel: "👾 Pixel (Apprendista)", botMax: "🧠 Max (Dilettante)", botNexus: "⚙️ Nexus (Stratega)",
+      botNeo: "⚡ Neo (Pro)", botAlpha: "🎯 Alpha (Esperto)", botCyber: "🦾 Cyber-Mente (Maestro)", botOmega: "🌌 IA-Omega (Imbattibile)"
     },
     es: { 
-      title: "Encontrar pares", 
-      easy: "Fácil", 
-      norm: "Normal", 
-      hard: "Difícil", 
-      extr: "Extremo", 
-      win: "¡Bien hecho, ganaste!", 
-      again: "Jugar de nuevo", 
-      exit: "Salir", 
-      st: "Ajustes", 
-      lang: "Idioma:", 
-      sndOn: "Música: ON", 
-      sndOff: "Música: OFF", 
-      match: "¡Pareja encontrada!", 
-      ok: "Aceptar",
-      musicVol: "Volumen Música:",
-      effectsVol: "Volumen Efectos:",
-      timerOn: "Timer: ON",
-      timerOff: "Timer: OFF",
-      stats: "Estadísticas",
-      statsTitle: "📈 Estadísticas del Juego",
-      bestTime: "Mejor tiempo:",
-      totalWins: "Victorias totales:",
-      totalGames: "Juegos totales:",
-      winRate: "Porcentaje victorias:",
-      playTime: "Tiempo jugado:",
-      avgTime: "Tiempo promedio:",
-      lastWin: "Última victoria:",
-      never: "Nunca",
-      resetStats: "Restablecer estadísticas",
-      close: "Cerrar",
-      confirmTitle: "Confirmar Acción",
-      confirmText: "¿Estás seguro de que quieres restablecer todas las estadísticas?",
-      yes: "Sí",
-      no: "No",
-      musicTitle: "Música",
-      musicText: "Ajusta el volumen de la música y los efectos",
-      settingsBtn: "Ajustes",
-      statsBtn: "Estadísticas",
-      timerLabel: "Temporizador"
+      title: "Encontrar pares", easy: "Fácil", norm: "Normal", hard: "Difícil", extr: "Extremo", 
+      win: "¡Bien hecho, ganaste!", again: "Jugar de nuevo", exit: "Salir", st: "Ajustes", 
+      lang: "Idioma:", sndOn: "Música: ON", sndOff: "Música: OFF", match: "¡Pareja encontrada!", ok: "Aceptar",
+      musicVol: "Volumen Música:", effectsVol: "Volumen Efectos:", timerOn: "Timer: ON", timerOff: "Timer: OFF",
+      stats: "Estadísticas", statsTitle: "📈 Estadísticas del Juego", bestTime: "Mejor tiempo:", bestTimeBot: "Mejor tiempo contra el Bot:", totalWins: "Victorias totales:", botWins: "Victorias contra el Bot:",
+      winRate: "Porcentaje victorias:", winRateBot: "Porcentaje victorias contra el Bot:", playTime: "Tiempo de juego:", avgTime: "Tiempo promedio:", avgTimeBot: "Tiempo promedio contra el Bot:", resetStats: "Restablecer estadísticas",
+      close: "Cerrar", confirmTitle: "Confirmar Acción", confirmText: "¿Estás seguro de que quieres restablecer todas las estadísticas?",
+      yes: "Sí", no: "No", settingsBtn: "Ajustes", statsBtn: "Estadísticas", creditMusic: "🎵 Música creada con",
+      playWithBot: "🤖 Jugar contra el Bot (beta)", selectGameDiff: "Seleccionar Dificultad", selectOpponent: "Seleccionar Oponente",
+      botTurn: "Turno del bot...", raceResults: "⏱️ Resultados de la Carrera", youLost: "¡Has perdido!", you: "Tú",
+      gd12: "Fácil (12 cartas)", gd20: "Normal (20 cartas)", gd30: "Difícil (30 cartas)", gd42: "Extremo (42 cartas)",
+      botRobi: "🤖 Robi (Novato)", botPixel: "👾 Pixel (Aprendiz)", botMax: "🧠 Max (Aficionado)", botNexus: "⚙️ Nexus (Estratega)",
+      botNeo: "⚡ Neo (Pro)", botAlpha: "🎯 Alpha (Experto)", botCyber: "🦾 Mente-Ciber (Maestro)", botOmega: "🌌 IA-Omega (Invencible)"
     },
     ar: { 
-      title: "البحث عن الأزواج", 
-      easy: "سهل", 
-      norm: "عادي", 
-      hard: "صعب", 
-      extr: "أقصى", 
-      win: "أحسنت، لقد فزت!", 
-      again: "العب مرة أخرى", 
-      exit: "خروج", 
-      st: "إعدادات", 
-      lang: "اللغة:", 
-      sndOn: "موسيقى: تفعيل", 
-      sndOff: "موسيقى: تعطيل", 
-      match: "تم العثور على زوج!", 
-      ok: "موافق",
-      musicVol: "مستوى صوت الموسيقى:",
-      effectsVol: "مستوى صوت المؤثرات:",
-      timerOn: "الموقت: تشغيل",
-      timerOff: "الموقت: إيقاف",
-      stats: "الإحصائيات",
-      statsTitle: "📈 إحصائيات اللعبة",
-      bestTime: "أفضل وقت:",
-      totalWins: "إجمالي الانتصارات:",
-      totalGames: "إجمالي الألعاب:",
-      winRate: "معدل الفوز:",
-      playTime: "وقت اللعب:",
-      avgTime: "متوسط الوقت:",
-      lastWin: "آخر فوز:",
-      never: "أبداً",
-      resetStats: "إعادة تعيين الإحصائيات",
-      close: "إغلاق",
-      confirmTitle: "تأكيد الإجراء",
-      confirmText: "هل أنت متأكد من أنك تريد إعادة تعيين جميع الإحصائيات?",
-      yes: "نعم",
-      no: "لا",
-      musicTitle: "موسيقى",
-      musicText: "ضبط مستوى صوت الموسيقى والمؤثرات",
-      settingsBtn: "الإعدادات",
-      statsBtn: "الإحصائيات",
-      timerLabel: "الموقت"
+      title: "البحث عن الأزواج", easy: "سهل", norm: "عادي", hard: "صعب", extr: "أقصى", 
+      win: "أحسنت، لقد فزت!", again: "العب مرة أخرى", exit: "خروج", st: "إعدادات", 
+      lang: "اللغة:", sndOn: "موسيقى: تفعيل", sndOff: "موسيقى: تعطيل", match: "تم العثور على زوج!", ok: "موافق",
+      musicVol: "مستوى صوت الموسيقى:", effectsVol: "مستوى صوت المؤثرات:", timerOn: "الموقت: تشغيل", timerOff: "الموقت: إيقاف",
+      stats: "الإحصائيات", statsTitle: "📈 إحصائيات اللعبة", bestTime: "أفضل وقت:", bestTimeBot: "أفضل وقت ضد البوت:", totalWins: "إجمالي الانتصارات:", botWins: "الانتصارات ضد البوت:",
+      winRate: "معدل الفوز:", winRateBot: "نسبة الفوز ضد البوت:", playTime: "وقت اللعب:", avgTime: "متوسط الوقت:", avgTimeBot: "متوسط الوقت ضد البوت:", resetStats: "إعادة تعيين الإحصائيات",
+      close: "إغلاق", confirmTitle: "تأكيد الإجراء", confirmText: "هل أنت متأكد من أنك تريد إعادة تعيين جميع الإحصائيات؟",
+      yes: "نعم", no: "لا", settingsBtn: "الإعدادات", statsBtn: "الإحصائيات", creditMusic: "🎵 تم إنشاء الموسيقى باستخدام",
+      playWithBot:"🤖 اللعب ضد البوت (تجريبي)", selectGameDiff: "اختر صعوبة اللعبة", selectOpponent: "اختر المنافس",
+      botTurn: "دور البوت...", raceResults: "⏱️ نتائج السباق", youLost: "لقد خسرت!", you: "أنت",
+      gd12: "سهل (12 بطاقات)", gd20: "عادي (20 بطاقة)", gd30: "صعب (30 بطاقة)", gd42: "أقصى (42 بطاقة)",
+      botRobi: "🤖 روبي (مبتدئ)", botPixel: "👾 بكسل (متدرب)", botMax: "🧠 ماكس (هاوٍ)", botNexus: "⚙️ نيكسوس (استراتيجي)",
+      botNeo: "⚡ نيو (محترف)", botAlpha: "🎯 ألفا (خبير)", botCyber: "🦾 العقل السيبراني (خبير)", botOmega: "🌌 أوميغا الذكاء الاصطناعي (لا يقهر)"
     },
     zh: { 
-      title: "配对游戏", 
-      easy: "简单", 
-      norm: "普通", 
-      hard: "困难", 
-      extr: "极限", 
-      win: "太棒了, 你赢了!", 
-      again: "再玩一次", 
-      exit: "退出", 
-      st: "设置", 
-      lang: "语言:", 
-      sndOn: "音乐: 开启", 
-      sndOff: "音乐: 关闭", 
-      match: "配对成功!", 
-      ok: "确定",
-      musicVol: "音乐音量:",
-      effectsVol: "效果音量:",
-      timerOn: "计时器: 开启",
-      timerOff: "计时器: 关闭",
-      stats: "统计",
-      statsTitle: "📈 游戏统计",
-      bestTime: "最佳时间:",
-      totalWins: "总胜利:",
-      totalGames: "总游戏:",
-      winRate: "胜率:",
-      playTime: "游戏时间:",
-      avgTime: "平均时间:",
-      lastWin: "最后胜利:",
-      never: "从未",
-      resetStats: "重置统计",
-      close: "关闭",
-      confirmTitle: "确认操作",
-      confirmText: "您确定要重置所有统计吗?",
-      yes: "是",
-      no: "否",
-      musicTitle: "音乐",
-      musicText: "调整音乐和效果音量",
-      settingsBtn: "设置",
-      statsBtn: "统计",
-      timerLabel: "计时器"
+      title: "配对游戏", easy: "简单", norm: "普通", hard: "困难", extr: "极限", 
+      win: "太棒了, 你赢了!", again: "再玩一次", exit: "退出", st: "设置", 
+      lang: "语言:", sndOn: "音乐: 开启", sndOff: "音乐: 关闭", match: "配对成功!", ok: "确定",
+      musicVol: "音乐音量:", effectsVol: "效果音量:", timerOn: "计时器: 开启", timerOff: "计时器: 关闭",
+      stats: "统计", statsTitle: "📈 游戏统计", bestTime: "最佳时间:", bestTimeBot: "对战机器人最佳时间:", totalWins: "总胜利:", botWins: "对战机器人胜利:",
+      winRate: "胜率:", winRateBot: "对战机器人胜率:", playTime: "游戏时间:", avgTime: "平均时间:", avgTimeBot: "对战机器人平均时间:", resetStats: "重置统计",
+      close: "关闭", confirmTitle: "确认操作", confirmText: "您确定要重置所有统计吗?",
+      yes: "是", no: "否", settingsBtn: "设置", statsBtn: "统计", creditMusic: "🎵 音乐制作：",
+      playWithBot: "🤖 与机器人对战 (测试版)", selectGameDiff: "选择游戏难度", selectOpponent: "选择对手",
+      botTurn: "机器人回合...", raceResults: "⏱️ 比赛结果", youLost: "你输了！", you: "你",
+      gd12: "简单 (12张牌)", gd20: "普通 (20张牌)", gd30: "困难 (30张牌)", gd42: "极限 (42张牌)",
+      botRobi: "🤖 罗比 (新手)", botPixel: "👾 像素 (学员)", botMax: "麦克斯 (业余)", botNexus: "⚙️ 关联 (战略家)",
+      botNeo: "⚡ 尼奥 (专业)", botAlpha: "🎯 阿尔法 (专家)", botCyber: "🦾 网络大脑 (大师)", botOmega: "🌌 AI-奥米加 (无敌)"
     },
     jp: { 
-      title: "ペア探し", 
-      easy: "簡単", 
-      norm: "普通", 
-      hard: "難しい", 
-      extr: "エクストリーム", 
-      win: "やったね, あなたの勝ち!", 
-      again: "もう一度遊ぶ", 
-      exit: "終了", 
-      st: "設定", 
-      lang: "言語:", 
-      sndOn: "音楽: オン", 
-      sndOff: "音楽: オフ", 
-      match: "ペアが見つかりました!", 
-      ok: "確認",
-      musicVol: "音楽の音量:",
-      effectsVol: "効果音の音量:",
-      timerOn: "タイマー: オン",
-      timerOff: "タイマー: オフ",
-      stats: "統計",
-      statsTitle: "📈 ゲーム統計",
-      bestTime: "ベストタイム:",
-      totalWins: "総勝利数:",
-      totalGames: "総ゲーム数:",
-      winRate: "勝率:",
-      playTime: "プレイ時間:",
-      avgTime: "平均時間:",
-      lastWin: "最終勝利:",
-      never: "一度もない",
-      resetStats: "統計をリセット",
-      close: "閉じる",
-      confirmTitle: "アクションを確認",
-      confirmText: "すべての統計をリセットしてもよろしいですか?",
-      yes: "はい",
-      no: "いいえ",
-      musicTitle: "音楽",
-      musicText: "音楽と効果音の音量を調整",
-      settingsBtn: "設定",
-      statsBtn: "統計",
-      timerLabel: "タイマー"
+      title: "ペア探し", easy: "簡単", norm: "普通", hard: "難しい", extr: "エクストリーム", 
+      win: "やったね, あなたの勝ち!", again: "もう一度遊ぶ", exit: "終了", st: "設定", 
+      lang: "言語:", sndOn: "音楽: オン", sndOff: "音楽: オフ", match: "ペアが見つかりました!", ok: "確認",
+      musicVol: "音楽の音量:", effectsVol: "効果音の音量:", timerOn: "タイマー: オン", timerOff: "タイマー: オフ",
+      stats: "統計", statsTitle: "📈 ゲーム統計", bestTime: "ベストタイム:", bestTimeBot: "ボット戦ベストタイム:", totalWins: "総勝利数:", botWins: "ボット戦勝利数:",
+      winRate: "勝率:", winRateBot: "ボット戦勝率:", playTime: "プレイ時間:", avgTime: "平均時間:", avgTimeBot: "ボット戦平均時間:", resetStats: "統計をリセット",
+      close: "閉じる", confirmTitle: "確認", confirmText: "すべての統計をリセットしてもよろしいですか?",
+      yes: "はい", no: "いいえ", settingsBtn: "設定", statsBtn: "統計", creditMusic: "🎵 BGM作成：",
+      playWithBot: "🤖 ボットと対戦 (ベータ版)", selectGameDiff: "難易度を選択", selectOpponent: "対戦相手を選択",
+      botTurn: "ボットのターン...", raceResults: "⏱️ レース結果", youLost: "あなたの負け！", you: "あなた",
+      gd12: "簡単 (12枚)", gd20: "普通 (20枚)", gd30: "難しい (30枚)", gd42: "エクストリーム (42枚)",
+      botRobi: "🤖 ロビ (初心者)", botPixel: "👾 ピクセル (見習い)", botMax: "🧠 マックス (アマチュア)", botNexus: "⚙️ ネクサス (戦略家)",
+      botNeo: "⚡ ネオ (プロ)", botAlpha: "🎯 アルファ (エキスパート)", botCyber: "🦾 サイバーマインド (マスター)", botOmega: "🌌 AI-オメガ (無敵)"
     },
     de: { 
-      title: "Paare finden", 
-      easy: "Einfach", 
-      norm: "Normal", 
-      hard: "Schwer", 
-      extr: "Extrem", 
-      win: "Gut gemacht, du hast gewonnen!", 
-      again: "Nochmal spielen", 
-      exit: "Beenden", 
-      st: "Einstellungen", 
-      lang: "Sprache:", 
-      sndOn: "Musik: EIN", 
-      sndOff: "Musik: AUS", 
-      match: "Paar gefunden!", 
-      ok: "OK",
-      musicVol: "Musiklautstärke:",
-      effectsVol: "Effektlautstärke:",
-      timerOn: "Timer: EIN",
-      timerOff: "Timer: AUS",
-      stats: "Statistiken",
-      statsTitle: "📈 Spielstatistiken",
-      bestTime: "Beste Zeit:",
-      totalWins: "Gesamtsiege:",
-      totalGames: "Gesamtspiele:",
-      winRate: "Gewinnrate:",
-      playTime: "Spielzeit:",
-      avgTime: "Durchschnittszeit:",
-      lastWin: "Letzter Sieg:",
-      never: "Nie",
-      resetStats: "Statistiken zurücksetzen",
-      close: "Schließen",
-      confirmTitle: "Aktion bestätigen",
-      confirmText: "Sind Sie sicher, dass Sie alle Statistiken zurücksetzen möchten?",
-      yes: "Ja",
-      no: "Nein",
-      musicTitle: "Musik",
-      musicText: "Musik- und Effektlautstärke einstellen",
-      settingsBtn: "Einstellungen",
-      statsBtn: "Statistiken",
-      timerLabel: "Timer"
+      title: "Paare finden", easy: "Einfach", norm: "Normal", hard: "Schwer", extr: "Extrem", 
+      win: "Gut gemacht, du hast gewonnen!", again: "Nochmal spielen", exit: "Beenden", st: "Einstellungen", 
+      lang: "Sprache:", sndOn: "Musik: EIN", sndOff: "Musik: AUS", match: "Paar gefunden!", ok: "OK",
+      musicVol: "Musiklautstärke:", effectsVol: "Effektlautstärke:", timerOn: "Timer: EIN", timerOff: "Timer: AUS",
+      stats: "Statistiken", statsTitle: "📈 Spielstatistiken", bestTime: "Beste Zeit:", bestTimeBot: "Beste Zeit gegen Bot:", totalWins: "Gesamtsiege:", botWins: "Siege gegen Bot:",
+      winRate: "Gewinnrate:", winRateBot: "Gewinnrate gegen Bot:", playTime: "Spielzeit:", avgTime: "Durchschnittszeit:", avgTimeBot: "Durchschnittszeit gegen Bot:", resetStats: "Statistiken zurücksetzen",
+      close: "Schließen", confirmTitle: "Aktion bestätigen", confirmText: "Bist du sicher, dass du alle Statistiken zurücksetzen möchtest?",
+      yes: "Ja", no: "Nein", settingsBtn: "Einstellungen", statsBtn: "Statistiken", creditMusic: "🎵 Musik erstellt mit",
+      playWithBot: "🤖 Gegen Bot spielen (Beta)", selectGameDiff: "Spielschwierigkeit wählen", selectOpponent: "Gegner wählen",
+      botTurn: "Bot ist am Zug...", raceResults: "⏱️ Rennergebnisse", youLost: "Du hast verloren!", you: "Du",
+      gd12: "Einfach (12 Karten)", gd20: "Normal (20 Karten)", gd30: "Schwer (30 Karten)", gd42: "Extrem (42 Karten)",
+      botRobi: "🤖 Robi (Anfänger)", botPixel: "👾 Pixel (Lehrling)", botMax: "🧠 Max (Amateur)", botNexus: "⚙️ Nexus (Stratege)",
+      botNeo: "⚡ Neo (Profi)", botAlpha: "🎯 Alpha (Kenner)", botCyber: "🦾 Cyber-Gehirn (Experte)", botOmega: "🌌 KI-Omega (Unbesiegbar)"
     }
   };
 
   let firstCard = null, secondCard = null, lockBoard = false;
   let matchedPairs = 0, totalPairs = 0, currentCols = 0;
-  let currentLang = 'en', musicEnabled = false, timerEnabled = false, timerRunning = false;
+  let currentLang = 'ru', musicEnabled = false, timerEnabled = false, timerRunning = false;
   let musicVolume = 0.5, effectsVolume = 0.7;
   let timerStartTime = 0, timerInterval = null, elapsedTime = 0;
   let gameStarted = false;
   
+  let isBotMode = false;
+  let botDifficulty = 'medium';
+  let botMemoryList = [];
+  let selectedBotCardsCount = 12;
+  let currentBotKey = "robi";
+  let playerTimeMs = 0;
+  let botTimeMs = 0;
+
+  const BOT_CONFIGS = {
+    easy: { memoryCapacity: 6, errorRate: 0.70, minThinkMs: 500, maxThinkMs: 900 },
+    medium: { memoryCapacity: 12, errorRate: 0.40, minThinkMs: 450, maxThinkMs: 750 },
+    hard: { memoryCapacity: 20, errorRate: 0.30, minThinkMs: 350, maxThinkMs: 550 },
+    expert: { memoryCapacity: 30, errorRate: 0.20, minThinkMs: 250, maxThinkMs: 400 }
+  };
+
   let stats = {
     bestTime: Infinity,
+    bestTimeBot: Infinity,
     totalWins: 0,
     totalGames: 0,
+    botWins: 0,
+    botGames: 0,
     totalPlayTime: 0,
     gameTimes: [],
+    botGameTimes: [],
     lastWinTime: null,
     sessionStartTime: Date.now()
   };
@@ -933,48 +899,121 @@ const translations = {
   const modalConfirm = document.getElementById('modal-confirm');
   const soundToggle = document.getElementById('sound-toggle');
   const timerToggle = document.getElementById('timer-toggle');
-  const langSelect = document.getElementById('lang-select');
   const timerContainer = document.getElementById('timer-container');
   const statsBtn = document.getElementById('stats-btn');
   const resetStatsBtn = document.getElementById('reset-stats');
   const confirmYesBtn = document.getElementById('confirm-yes');
   const confirmNoBtn = document.getElementById('confirm-no');
   
+  const botModeBtn = document.getElementById('bot-mode-btn');
+  const modalBotGameDiff = document.getElementById('modal-bot-game-diff');
+  const modalBotDiff = document.getElementById('modal-bot-diff');
+  const modalNextPlayer = document.getElementById('modal-next-player');
+  const modalResultsBanner = document.getElementById('modal-results-banner');
+  const resultsBannerContent = document.getElementById('results-banner-content');
+  const winText = document.getElementById('win-text');
+
+  const langSelectTrigger = document.getElementById('custom-lang-select');
+  const langOptionsContainer = document.getElementById('custom-lang-options');
+  const langOptions = document.querySelectorAll('.custom-option');
+  
   const soundFlip = new Audio('dostavanie_karti.mp3');
   const soundTap = new Audio('tap.mp3');
   const soundMatch = new Audio('pravilna_para.mp3');
   const soundWin = new Audio('pobeda.mp3');
-  const soundLose = new Audio('proigral.mp3');
   const soundWarning = new Audio('warning.mp3');
+  const soundProigral = new Audio('proigral.mp3');
   
   const bgMusic = new Audio('music.mp3');
   bgMusic.loop = true;
   bgMusic.volume = musicVolume;
+
+  langSelectTrigger.onclick = (e) => {
+    e.stopPropagation();
+    playEffect(soundTap);
+    langSelectTrigger.classList.toggle('open');
+    langOptionsContainer.classList.toggle('open');
+  };
+
+  window.addEventListener('click', () => {
+    langSelectTrigger.classList.remove('open');
+    langOptionsContainer.classList.remove('open');
+  });
+
+  langOptions.forEach(option => {
+    option.onclick = (e) => {
+      e.stopPropagation();
+      playEffect(soundTap);
+      
+      currentLang = option.dataset.value;
+      langSelectTrigger.textContent = option.textContent;
+      
+      langOptions.forEach(opt => opt.classList.remove('selected'));
+      option.classList.add('selected');
+      
+      langSelectTrigger.classList.remove('open');
+      langOptionsContainer.classList.remove('open');
+      
+      updateUI();
+      saveSettings();
+    };
+  });
+
+  function getBotName(botKey) {
+    const t = translations[currentLang] || translations.en;
+    const map = {
+      robi: t.botRobi, pixel: t.botPixel, max: t.botMax, nexus: t.botNexus,
+      neo: t.botNeo, alpha: t.botAlpha, cyber: t.botCyber, omega: t.botOmega
+    };
+    return map[botKey] || t.botRobi;
+  }
 
   function loadSettings() {
     try {
       const saved = localStorage.getItem('pairsGameSettings');
       if (saved) {
         const parsed = JSON.parse(saved);
-        currentLang = parsed.language || 'en';
-        musicEnabled = parsed.musicEnabled || false;
+        currentLang = parsed.language || getInitialLanguage();
+        musicEnabled = false;
         timerEnabled = parsed.timerEnabled || false;
         musicVolume = parsed.musicVolume || 0.5;
         effectsVolume = parsed.effectsVolume || 0.7;
-        
-        langSelect.value = currentLang;
-        document.getElementById('music-volume').value = musicVolume * 100;
-        document.getElementById('effects-volume').value = effectsVolume * 100;
-        
-        if (timerEnabled) {
-          timerContainer.style.display = 'block';
-        }
-        
-        updateVolumes();
-        toggleBgMusic();
+      } else {
+        currentLang = getInitialLanguage();
       }
-    } catch (e) {
-      console.log('Failed to load settings');
+
+      const activeOpt = document.querySelector(`.custom-option[data-value="${currentLang}"]`);
+      if (activeOpt) {
+        langSelectTrigger.textContent = activeOpt.textContent;
+        langOptions.forEach(opt => opt.classList.remove('selected'));
+        activeOpt.classList.add('selected');
+      }
+
+      document.getElementById('music-volume').value = musicVolume * 100;
+      document.getElementById('effects-volume').value = effectsVolume * 100;
+      
+      if (timerEnabled || isBotMode) {
+        timerContainer.style.display = 'block';
+      }
+      
+      updateVolumes();
+      toggleBgMusic();
+    } catch (e) {}
+  }
+
+  function getInitialLanguage() {
+    const userLang = navigator.language || navigator.userLanguage || 'ru';
+    const code = userLang.slice(0, 2).toLowerCase();
+    if (translations[code]) {
+      return code;
+    } else if (code === 'uk') {
+      return 'ua';
+    } else if (code === 'be') {
+      return 'by';
+    } else if (code === 'ja') {
+      return 'jp';
+    } else {
+      return 'ru';
     }
   }
 
@@ -987,9 +1026,7 @@ const translations = {
         musicVolume: musicVolume,
         effectsVolume: effectsVolume
       }));
-    } catch (e) {
-      console.log('Failed to save settings');
-    }
+    } catch (e) {}
   }
 
   function loadStats() {
@@ -998,18 +1035,20 @@ const translations = {
       if (saved) {
         const parsed = JSON.parse(saved);
         stats.bestTime = parsed.bestTime || Infinity;
+        stats.bestTimeBot = parsed.bestTimeBot || Infinity;
         stats.totalWins = parsed.totalWins || 0;
         stats.totalGames = parsed.totalGames || 0;
+        stats.botWins = parsed.botWins || 0;
+        stats.botGames = parsed.botGames || 0;
         stats.totalPlayTime = parsed.totalPlayTime || 0;
         stats.gameTimes = parsed.gameTimes || [];
+        stats.botGameTimes = parsed.botGameTimes || [];
         stats.lastWinTime = parsed.lastWinTime || null;
         stats.sessionStartTime = Date.now();
         
         updateStatsDisplay();
       }
-    } catch (e) {
-      console.log('Failed to load stats');
-    }
+    } catch (e) {}
   }
 
   function saveStats() {
@@ -1018,15 +1057,17 @@ const translations = {
       
       localStorage.setItem('pairsGameStats', JSON.stringify({
         bestTime: stats.bestTime,
+        bestTimeBot: stats.bestTimeBot,
         totalWins: stats.totalWins,
         totalGames: stats.totalGames,
+        botWins: stats.botWins,
+        botGames: stats.botGames,
         totalPlayTime: totalPlayTimeWithCurrent,
         gameTimes: stats.gameTimes,
+        botGameTimes: stats.botGameTimes,
         lastWinTime: stats.lastWinTime
       }));
-    } catch (e) {
-      console.log('Failed to save stats');
-    }
+    } catch (e) {}
   }
 
   function formatTime(ms) {
@@ -1034,7 +1075,7 @@ const translations = {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    const milliseconds = ms % 1000;
+    const milliseconds = Math.floor(ms % 1000);
     
     if (hours > 0) {
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0').slice(0, 3)}`;
@@ -1067,12 +1108,14 @@ const translations = {
     document.getElementById('stats-header').textContent = t.stats;
     document.getElementById('stats-title').textContent = t.statsTitle;
     document.getElementById('stats-best-time-label').textContent = t.bestTime;
+    document.getElementById('stats-best-time-bot-label').textContent = t.bestTimeBot;
     document.getElementById('stats-total-wins-label').textContent = t.totalWins;
-    document.getElementById('stats-total-games-label').textContent = t.totalGames;
+    document.getElementById('stats-bot-wins-label').textContent = t.botWins;
     document.getElementById('stats-win-rate-label').textContent = t.winRate;
+    document.getElementById('stats-win-rate-bot-label').textContent = t.winRateBot;
     document.getElementById('stats-play-time-label').textContent = t.playTime;
     document.getElementById('stats-avg-time-label').textContent = t.avgTime;
-    document.getElementById('stats-last-win-label').textContent = t.lastWin;
+    document.getElementById('stats-avg-time-bot-label').textContent = t.avgTimeBot;
     document.getElementById('reset-stats').textContent = t.resetStats;
     document.getElementById('close-stats').textContent = t.close;
     
@@ -1083,12 +1126,18 @@ const translations = {
     
     const bestTime = stats.bestTime === Infinity ? "00:00:00.000" : formatTime(stats.bestTime);
     document.getElementById('stats-best-time').textContent = bestTime;
+
+    const bestTimeBot = stats.bestTimeBot === Infinity ? "00:00:00.000" : formatTime(stats.bestTimeBot);
+    document.getElementById('stats-best-time-bot').textContent = bestTimeBot;
     
     document.getElementById('stats-total-wins').textContent = stats.totalWins;
-    document.getElementById('stats-total-games').textContent = stats.totalGames;
+    document.getElementById('stats-bot-wins').textContent = stats.botWins;
     
     const winRate = stats.totalGames > 0 ? Math.round((stats.totalWins / stats.totalGames) * 100) : 0;
     document.getElementById('stats-win-rate').textContent = `${winRate}%`;
+
+    const botWinRate = stats.botGames > 0 ? Math.round((stats.botWins / stats.botGames) * 100) : 0;
+    document.getElementById('stats-win-rate-bot').textContent = `${botWinRate}%`;
     
     const currentPlayTime = stats.totalPlayTime + (Date.now() - stats.sessionStartTime);
     document.getElementById('stats-play-time').textContent = formatPlayTime(currentPlayTime);
@@ -1097,11 +1146,11 @@ const translations = {
       formatTime(stats.gameTimes.reduce((a, b) => a + b, 0) / stats.gameTimes.length) : 
       "00:00:00.000";
     document.getElementById('stats-avg-time').textContent = avgTime;
-    
-    const lastWin = stats.lastWinTime ? 
-      new Date(stats.lastWinTime).toLocaleDateString() + ' ' + new Date(stats.lastWinTime).toLocaleTimeString() : 
-      t.never;
-    document.getElementById('stats-last-win').textContent = lastWin;
+
+    const avgTimeBot = stats.botGameTimes.length > 0 ? 
+      formatTime(stats.botGameTimes.reduce((a, b) => a + b, 0) / stats.botGameTimes.length) : 
+      "00:00:00.000";
+    document.getElementById('stats-avg-time-bot').textContent = avgTimeBot;
   }
 
   function updateStatsInterval() {
@@ -1115,8 +1164,8 @@ const translations = {
     soundTap.volume = effectsVolume;
     soundMatch.volume = effectsVolume;
     soundWin.volume = effectsVolume;
-    soundLose.volume = effectsVolume;
     soundWarning.volume = effectsVolume;
+    soundProigral.volume = effectsVolume;
   }
 
   function playEffect(audio) {
@@ -1127,14 +1176,16 @@ const translations = {
 
   function toggleBgMusic() {
     if (musicEnabled) {
+      bgMusic.currentTime = 0;
       bgMusic.play().catch(e => {});
     } else {
       bgMusic.pause();
+      bgMusic.currentTime = 0;
     }
   }
 
   function updateTimerDisplay() {
-    if (!timerEnabled) return;
+    if (!timerEnabled && !isBotMode) return;
     
     const timerDisplay = document.getElementById('timer-display');
     
@@ -1143,21 +1194,11 @@ const translations = {
       elapsedTime = now - timerStartTime;
     }
     
-    const totalMs = elapsedTime;
-    const hours = Math.floor(totalMs / 3600000);
-    const minutes = Math.floor((totalMs % 3600000) / 60000);
-    const seconds = Math.floor((totalMs % 60000) / 1000);
-    const milliseconds = totalMs % 1000;
-    
-    timerDisplay.textContent = 
-      `${hours.toString().padStart(2, '0')}:` +
-      `${minutes.toString().padStart(2, '0')}:` +
-      `${seconds.toString().padStart(2, '0')}.` +
-      `${milliseconds.toString().padStart(3, '0').slice(0, 3)}`;
+    timerDisplay.textContent = formatTime(elapsedTime);
   }
 
   function startTimer() {
-    if (!timerEnabled || timerRunning || !gameStarted) return;
+    if (timerRunning || !gameStarted) return;
     timerStartTime = Date.now();
     timerRunning = true;
     timerContainer.style.display = 'block';
@@ -1186,7 +1227,7 @@ const translations = {
     playEffect(soundTap);
     updateUI();
     
-    if (timerEnabled) {
+    if (timerEnabled || isBotMode) {
         resetTimer();
         timerContainer.style.display = 'block';
     } else {
@@ -1201,24 +1242,10 @@ const translations = {
     return array.sort(() => Math.random() - 0.5);
   }
 
-  function shuffleRemaining() {
-    const cards = Array.from(document.querySelectorAll('.card')).filter(c => c.style.opacity !== '0');
-    if (cards.length === 0) return;
-
-    const shuffled = shuffle([...cards]);
-    
-    shuffled.forEach((card, index) => {
-      const row = Math.floor(index / currentCols) + 1;
-      const col = (index % currentCols) + 1;
-      card.style.gridArea = `${row} / ${col} / ${row + 1} / ${col + 1}`;
-      card.style.transform = "scale(1.05)";
-      setTimeout(() => card.style.transform = "scale(1)", 300);
-    });
-  }
-
   function updateUI() {
     const t = translations[currentLang] || translations.en;
     
+    document.title = t.title;
     document.getElementById('main-title').textContent = t.title;
     document.getElementById('btn-easy').textContent = t.easy;
     document.getElementById('btn-norm').textContent = t.norm;
@@ -1243,6 +1270,32 @@ const translations = {
     document.getElementById('settings-btn').title = t.settingsBtn;
     document.getElementById('stats-btn').title = t.statsBtn;
     
+    botModeBtn.textContent = t.playWithBot;
+    exitGameBtn.textContent = '🚪 ' + t.exit;
+    document.getElementById('bot-game-diff-title').textContent = t.selectGameDiff;
+    document.getElementById('bot-diff-title').textContent = t.selectOpponent;
+    document.getElementById('next-player-text').textContent = t.botTurn;
+    document.getElementById('results-banner-title').textContent = t.raceResults;
+
+    document.getElementById('bot-gd-12').textContent = t.gd12;
+    document.getElementById('bot-gd-20').textContent = t.gd20;
+    document.getElementById('bot-gd-30').textContent = t.gd30;
+    document.getElementById('bot-gd-42').textContent = t.gd42;
+
+    document.getElementById('bot-btn-robi').textContent = t.botRobi;
+    document.getElementById('bot-btn-pixel').textContent = t.botPixel;
+    document.getElementById('bot-btn-max').textContent = t.botMax;
+    document.getElementById('bot-btn-nexus').textContent = t.botNexus;
+    document.getElementById('bot-btn-neo').textContent = t.botNeo;
+    document.getElementById('bot-btn-alpha').textContent = t.botAlpha;
+    document.getElementById('bot-btn-cyber').textContent = t.botCyber;
+    document.getElementById('bot-btn-omega').textContent = t.botOmega;
+
+    const footerElement = document.querySelector('.footer');
+    if (footerElement) {
+      footerElement.innerHTML = `${t.creditMusic} <a href="https://www.suno.ai/" target="_blank">Suno AI</a>`;
+    }
+    
     updateStatsDisplay();
   }
 
@@ -1253,47 +1306,242 @@ const translations = {
     setTimeout(() => { messageBox.style.opacity = '0'; }, 1200);
   }
 
+  function rememberCard(id, symbol) {
+    const config = BOT_CONFIGS[botDifficulty] || BOT_CONFIGS.medium;
+    
+    botMemoryList = botMemoryList.filter(item => item.id !== id);
+
+    botMemoryList.push({
+      id: id,
+      symbol: symbol
+    });
+
+    if (botMemoryList.length > config.memoryCapacity) {
+      botMemoryList.shift();
+    }
+  }
+
+  function cleanBotMemory() {
+    botMemoryList = botMemoryList.filter(item => {
+      const el = document.querySelector(`.card[data-id="${item.id}"]`);
+      return el && !el.classList.contains('matched');
+    });
+  }
+
   function setupBoard(cardsCount) {
     gameBoard.innerHTML = '';
     matchedPairs = 0;
     totalPairs = cardsCount / 2;
     gameStarted = false;
+    
+    botMemoryList = [];
+    playerTimeMs = 0;
+    botTimeMs = 0;
+    
     const symbols = shuffle([...cardSymbols]).slice(0, totalPairs);
     const cardSet = shuffle([...symbols, ...symbols]);
-    currentCols = Math.min(10, Math.ceil(Math.sqrt(cardSet.length)));
+    
+    if (cardsCount <= 12) {
+        currentCols = 4;
+    } else if (cardsCount <= 20) {
+        currentCols = 5;
+    } else if (cardsCount <= 30) {
+        currentCols = 6;
+    } else {
+        currentCols = 7;
+    }
+    
     gameBoard.style.gridTemplateColumns = `repeat(${currentCols}, 90px)`;
+    gameBoard.style.gridTemplateRows = `repeat(${Math.ceil(cardSet.length / currentCols)}, 120px)`;
     
     cardSet.forEach((symbol, index) => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      const row = Math.floor(index / currentCols) + 1;
-      const col = (index % currentCols) + 1;
-      card.style.gridArea = `${row} / ${col} / ${row + 1} / ${col + 1}`;
-      card.innerHTML = `<div class="card-inner"><div class="card-front">${symbol}</div><div class="card-back">❓</div></div>`;
-      card.dataset.symbol = symbol;
-      card.onclick = () => onCardClick(card);
-      gameBoard.appendChild(card);
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.id = index;
+        card.innerHTML = `<div class="card-inner"><div class="card-front">${symbol}</div><div class="card-back">❓</div></div>`;
+        card.dataset.symbol = symbol;
+        card.onclick = () => onCardClick(card);
+        gameBoard.appendChild(card);
     });
     lockBoard = false; 
     firstCard = null;
     
-    if (timerEnabled) {
-      resetTimer();
+    if (timerEnabled || isBotMode) {
+        resetTimer();
+        timerContainer.style.display = 'block';
     }
   }
 
+  function handleMatchedPair(card1, card2) {
+    card1.classList.add('matched');
+    card2.classList.add('matched');
+    
+    setTimeout(() => {
+      card1.classList.add('matched-fade');
+      card2.classList.add('matched-fade');
+    }, 1000);
+  }
+
+  function startBotTurn() {
+    lockBoard = true;
+    modalNextPlayer.classList.add('active');
+    
+    setTimeout(() => {
+      modalNextPlayer.classList.remove('active');
+      
+      const allCards = document.querySelectorAll('.card');
+      allCards.forEach(c => {
+        c.classList.remove('matched', 'matched-fade', 'flipped');
+      });
+
+      let botStartTime = Date.now();
+      let botPairsFound = 0;
+      const config = BOT_CONFIGS[botDifficulty] || BOT_CONFIGS.medium;
+
+      function getThinkDelay() {
+        return Math.floor(Math.random() * (config.maxThinkMs - config.minThinkMs + 1)) + config.minThinkMs;
+      }
+
+      function botMakeMove() {
+        cleanBotMemory();
+
+        let unmatched = Array.from(document.querySelectorAll('.card:not(.matched)'));
+        if (unmatched.length < 2) {
+          botTimeMs = Date.now() - botStartTime;
+          setTimeout(showGameResults, 1000);
+          return;
+        }
+
+        let c1 = null, c2 = null;
+        let makeMistake = Math.random() < config.errorRate;
+
+        if (!makeMistake) {
+          let symbolGroups = {};
+          botMemoryList.forEach(item => {
+            if (!symbolGroups[item.symbol]) symbolGroups[item.symbol] = [];
+            symbolGroups[item.symbol].push(item.id);
+          });
+
+          for (let sym in symbolGroups) {
+            if (symbolGroups[sym].length >= 2) {
+              c1 = document.querySelector(`.card[data-id="${symbolGroups[sym][0]}"]`);
+              c2 = document.querySelector(`.card[data-id="${symbolGroups[sym][1]}"]`);
+              break;
+            }
+          }
+        }
+
+        if (!c1) {
+          let unknown = unmatched.filter(c => !botMemoryList.some(m => m.id == c.dataset.id));
+          if (unknown.length > 0) {
+            c1 = unknown[Math.floor(Math.random() * unknown.length)];
+          } else {
+            c1 = unmatched[Math.floor(Math.random() * unmatched.length)];
+          }
+        }
+
+        setTimeout(() => {
+          playEffect(soundFlip);
+          c1.classList.add('flipped');
+          rememberCard(c1.dataset.id, c1.dataset.symbol);
+
+          if (!c2) {
+            cleanBotMemory();
+            let matchInMem = botMemoryList.find(item => item.symbol === c1.dataset.symbol && item.id != c1.dataset.id);
+            
+            if (matchInMem && !makeMistake) {
+              c2 = document.querySelector(`.card[data-id="${matchInMem.id}"]`);
+            } else {
+              let available = unmatched.filter(c => c !== c1);
+              let unknown2 = available.filter(c => !botMemoryList.some(m => m.id == c.dataset.id));
+              if (unknown2.length > 0) {
+                c2 = unknown2[Math.floor(Math.random() * unknown2.length)];
+              } else {
+                c2 = available[Math.floor(Math.random() * available.length)];
+              }
+            }
+          }
+
+          setTimeout(() => {
+            playEffect(soundFlip);
+            c2.classList.add('flipped');
+            rememberCard(c2.dataset.id, c2.dataset.symbol);
+
+            setTimeout(() => {
+              if (c1.dataset.symbol === c2.dataset.symbol) {
+                playEffect(soundMatch);
+                handleMatchedPair(c1, c2);
+                botPairsFound++;
+
+                if (botPairsFound >= totalPairs) {
+                  botTimeMs = Date.now() - botStartTime;
+                  setTimeout(showGameResults, 1200);
+                } else {
+                  setTimeout(botMakeMove, getThinkDelay());
+                }
+              } else {
+                playEffect(soundProigral);
+                setTimeout(() => {
+                  c1.classList.remove('flipped');
+                  c2.classList.remove('flipped');
+                  setTimeout(botMakeMove, getThinkDelay());
+                }, 800);
+              }
+            }, 600);
+          }, getThinkDelay());
+        }, getThinkDelay());
+      }
+
+      botMakeMove();
+    }, 1500);
+  }
+
+  function showGameResults() {
+    const t = translations[currentLang] || translations.en;
+    const botNameText = getBotName(currentBotKey);
+    resultsBannerContent.innerHTML = `${botNameText} - ${formatTime(botTimeMs)}<br>${t.you} - ${formatTime(playerTimeMs)}`;
+    modalResultsBanner.classList.add('active');
+
+    setTimeout(() => {
+      modalResultsBanner.classList.remove('active');
+      setTimeout(() => {
+        const userWon = playerTimeMs < botTimeMs;
+        stats.botGames++;
+        stats.botGameTimes.push(playerTimeMs);
+        if (playerTimeMs < stats.bestTimeBot) {
+          stats.bestTimeBot = playerTimeMs;
+        }
+
+        if (userWon) {
+          stats.totalWins++;
+          stats.botWins++;
+          playEffect(soundWin);
+          winText.textContent = t.win;
+        } else {
+          playEffect(soundProigral);
+          winText.textContent = t.youLost;
+        }
+        saveStats();
+        updateStatsDisplay();
+        modal.classList.add('active');
+      }, 600);
+    }, 4000);
+  }
+
   function onCardClick(card) {
-    if (lockBoard || card === firstCard || card.classList.contains('flipped') || card.classList.contains('disabled')) return;
+    if (lockBoard || card === firstCard || card.classList.contains('flipped') || card.classList.contains('matched') || card.classList.contains('disabled')) return;
     
     if (!gameStarted) {
       gameStarted = true;
-      if (timerEnabled && !timerRunning) {
+      if ((timerEnabled || isBotMode) && !timerRunning) {
         startTimer();
       }
     }
     
     playEffect(soundFlip);
     card.classList.add('flipped');
+
+    rememberCard(card.dataset.id, card.dataset.symbol);
     
     if (!firstCard) { 
       firstCard = card; 
@@ -1308,58 +1556,44 @@ const translations = {
       showMatchMessage();
       const c1 = firstCard; 
       const c2 = secondCard;
-      
-      document.querySelectorAll('.card').forEach(c => {
-        c.classList.add('disabled');
-      });
-      
-      setTimeout(() => {
-        c1.style.transition = 'opacity 1s ease-in-out';
-        c2.style.transition = 'opacity 1s ease-in-out';
-        c1.style.opacity = '0';
-        c2.style.opacity = '0';
-        
-        setTimeout(() => {
-          c1.style.pointerEvents = 'none';
-          c2.style.pointerEvents = 'none';
-          
-          document.querySelectorAll('.card:not([style*="opacity: 0"])').forEach(c => {
-            c.classList.remove('disabled');
-          });
-          
-          shuffleRemaining();
-        }, 1000);
-      }, 500);
+
+      handleMatchedPair(c1, c2);
 
       matchedPairs++;
+      
       if (matchedPairs === totalPairs) {
         stopTimer();
-        
+        playerTimeMs = elapsedTime;
         stats.totalGames++;
-        stats.totalWins++;
-        
-        if (timerEnabled) {
-          const gameTime = elapsedTime;
-          stats.gameTimes.push(gameTime);
-          
-          if (gameTime < stats.bestTime) {
-            stats.bestTime = gameTime;
+
+        if (isBotMode) {
+          firstCard = null;
+          lockBoard = false;
+          startBotTurn();
+        } else {
+          stats.totalWins++;
+          if (timerEnabled) {
+            stats.gameTimes.push(playerTimeMs);
+            if (playerTimeMs < stats.bestTime) {
+              stats.bestTime = playerTimeMs;
+            }
           }
+          stats.lastWinTime = Date.now();
+          saveStats();
+          updateStatsDisplay();
+          
+          winText.textContent = (translations[currentLang] || translations.en).win;
+          setTimeout(() => { 
+            playEffect(soundWin); 
+            modal.classList.add('active'); 
+          }, 900);
         }
-        
-        stats.lastWinTime = Date.now();
-        saveStats();
-        updateStatsDisplay();
-        
-        setTimeout(() => { 
-          playEffect(soundWin); 
-          modal.classList.add('active'); 
-        }, 1500);
+      } else {
+        firstCard = null;
+        lockBoard = false;
       }
-      lockBoard = false; 
-      firstCard = null;
     } else {
-      playEffect(soundLose);
+      playEffect(soundProigral);
       setTimeout(() => {
         firstCard.classList.remove('flipped');
         secondCard.classList.remove('flipped');
@@ -1369,18 +1603,79 @@ const translations = {
     }
   }
 
-  document.querySelectorAll('#difficulty button').forEach(btn => {
+  botModeBtn.onclick = () => {
+    playEffect(soundTap);
+    modalBotGameDiff.classList.add('active');
+  };
+
+  document.querySelectorAll('.bot-game-diff-btn').forEach(btn => {
     btn.onclick = () => {
       playEffect(soundTap);
-      setupBoard(parseInt(btn.dataset.cards));
-      document.querySelectorAll('#difficulty button').forEach(b => b.disabled = false);
-      btn.disabled = true;
-      
-      stats.totalGames++;
+      selectedBotCardsCount = parseInt(btn.dataset.cards);
+      modalBotGameDiff.classList.remove('active');
+      modalBotDiff.classList.add('active');
+    };
+  });
+
+  document.querySelectorAll('.bot-diff-btn').forEach(btn => {
+    btn.onclick = () => {
+      playEffect(soundTap);
+      botDifficulty = btn.dataset.diff;
+      currentBotKey = btn.dataset.botKey;
+      modalBotDiff.classList.remove('active');
+      isBotMode = true;
+      updateExitBtnColor();
+      document.querySelectorAll('#difficulty button').forEach(b => b.classList.remove('pressed'));
+      setupBoard(selectedBotCardsCount);
       saveStats();
       updateStatsDisplay();
     };
   });
+
+  document.querySelectorAll('#difficulty button').forEach(btn => {
+    btn.onclick = () => {
+      playEffect(soundTap);
+      isBotMode = false;
+      updateExitBtnColor();
+      
+      document.querySelectorAll('#difficulty button').forEach(b => b.classList.remove('pressed'));
+      btn.classList.add('pressed');
+      
+      setupBoard(parseInt(btn.dataset.cards));
+      saveStats();
+      updateStatsDisplay();
+    };
+  });
+
+  const exitGameBtn = document.getElementById('exit-game-btn');
+  
+  const updateExitBtnColor = () => {
+    const t = translations[currentLang] || translations.en;
+    if (isBotMode) {
+      botModeBtn.style.display = 'none';
+      exitGameBtn.classList.add('visible');
+      exitGameBtn.textContent = '🚪 ' + t.exit;
+    } else {
+      botModeBtn.style.display = 'flex';
+      exitGameBtn.classList.remove('visible');
+    }
+  };
+
+  exitGameBtn.onclick = () => {
+    playEffect(soundTap);
+    stopTimer();
+    firstCard = null;
+    secondCard = null;
+    lockBoard = false;
+    gameStarted = false;
+    matchedPairs = 0;
+    isBotMode = false;
+    botTurnRunning = false;
+    updateExitBtnColor();
+    document.querySelectorAll('#difficulty button').forEach(b => b.classList.remove('pressed'));
+    document.getElementById('btn-easy').classList.add('pressed');
+    setupBoard(12);
+  };
 
   document.getElementById('settings-btn').onclick = () => { 
     playEffect(soundTap); 
@@ -1417,10 +1712,14 @@ const translations = {
     playEffect(soundTap);
     stats = {
       bestTime: Infinity,
+      bestTimeBot: Infinity,
       totalWins: 0,
       totalGames: 0,
+      botWins: 0,
+      botGames: 0,
       totalPlayTime: 0,
       gameTimes: [],
+      botGameTimes: [],
       lastWinTime: null,
       sessionStartTime: Date.now()
     };
@@ -1445,21 +1744,11 @@ const translations = {
 
   timerToggle.onclick = toggleTimer;
 
-  langSelect.addEventListener('change', (e) => {
-    currentLang = e.target.value;
-    updateUI();
-    saveSettings();
-  });
-
   document.getElementById('music-volume').addEventListener('input', (e) => {
     musicVolume = parseInt(e.target.value) / 100;
     updateVolumes();
     document.getElementById('music-volume-value').textContent = e.target.value + '%';
     saveSettings();
-  });
-
-  document.querySelector('.language-select-wrapper').addEventListener('click', () => {
-    playEffect(soundTap);
   });
 
   document.getElementById('effects-volume').addEventListener('input', (e) => {
@@ -1480,8 +1769,12 @@ const translations = {
   document.getElementById('play-again').onclick = () => {
     playEffect(soundTap);
     modal.classList.remove('active');
-    const activeDifficulty = Array.from(document.querySelectorAll('#difficulty button')).find(b => b.disabled);
-    setupBoard(activeDifficulty ? parseInt(activeDifficulty.dataset.cards) : 10);
+    if (isBotMode) {
+      setupBoard(selectedBotCardsCount);
+    } else {
+      const activeDifficulty = Array.from(document.querySelectorAll('#difficulty button')).find(b => b.classList.contains('pressed'));
+      setupBoard(activeDifficulty ? parseInt(activeDifficulty.dataset.cards) : 12);
+    }
   };
 
   document.getElementById('exit-win').onclick = () => {
@@ -1500,9 +1793,9 @@ const translations = {
     updateUI();
     updateVolumes();
     updateStatsInterval();
+    document.getElementById('btn-easy').classList.add('pressed');
+    setupBoard(12);
   });
-
-  setupBoard(10);
 </script>
 </body>
 </html>
